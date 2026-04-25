@@ -10,6 +10,7 @@ module.exports = {
           teal:    '#2dd4bf',
           red:     '#f87171',
           amber:   '#facc15',
+          blue:    '#60a5fa',
         },
       },
     },

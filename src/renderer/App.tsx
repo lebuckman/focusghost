@@ -1,29 +1,46 @@
 import React, { useState } from 'react';
+import TaskDeclaration from './screens/TaskDeclaration';
+import ActiveSession   from './screens/ActiveSession';
+import GhostChat       from './screens/GhostChat';
+import SessionRecap    from './screens/SessionRecap';
+import type { SessionRecapPayload } from '../shared/ipc-contract';
 
 type Screen = 'declare' | 'session' | 'chat' | 'recap';
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('declare');
+  const [screen,      setScreen]      = useState<Screen>('declare');
+  const [recap,       setRecap]       = useState<SessionRecapPayload | null>(null);
+  const [activeTask,  setActiveTask]  = useState('');
+  const [activeMins,  setActiveMins]  = useState(30);
 
   return (
-    <div className="w-full h-screen bg-ghost-bg text-white flex flex-col items-center justify-center gap-4 p-4">
-      <div className="text-ghost-teal text-2xl font-bold">👻 FocusGhost</div>
-      <div className="text-slate-400 text-sm">Stack is working. Current screen: {screen}</div>
-      <div className="flex gap-2 flex-wrap justify-center">
-        {(['declare','session','chat','recap'] as Screen[]).map(s => (
-          <button
-            key={s}
-            onClick={() => setScreen(s)}
-            className={`px-3 py-1 rounded text-sm border ${
-              screen === s
-                ? 'bg-ghost-teal text-black border-ghost-teal'
-                : 'bg-ghost-surface text-slate-300 border-white/10'
-            }`}
-          >
-            {s}
-          </button>
-        ))}
-      </div>
+    <div style={{ width: '100%', height: '100vh', overflow: 'hidden', background: '#111111', fontFamily: "'Inter', sans-serif" }}>
+      {screen === 'declare' && (
+        <TaskDeclaration
+          onStart={(task, durationMin) => {
+            setActiveTask(task);
+            setActiveMins(durationMin);
+            setScreen('session');
+          }}
+        />
+      )}
+      {screen === 'session' && (
+        <ActiveSession
+          task={activeTask}
+          durationMin={activeMins}
+          onOpenChat={() => setScreen('chat')}
+          onRecap={(data) => { setRecap(data); setScreen('recap'); }}
+        />
+      )}
+      {screen === 'chat' && (
+        <GhostChat onBack={() => setScreen('session')} />
+      )}
+      {screen === 'recap' && recap && (
+        <SessionRecap
+          recap={recap}
+          onNewSession={() => { setRecap(null); setScreen('declare'); }}
+        />
+      )}
     </div>
   );
 }
