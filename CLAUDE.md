@@ -47,7 +47,7 @@ These must all be working before any stretch goal is touched.
 5. **Drift detection** — all three patterns: frequency, distraction, stuck (see Drift Detection section)
 6. **AI nudge overlay** — floating toast (separate BrowserWindow), Gemini/Gemma generates context-aware message; may also be a popup for more serious drift
 7. **Ghost Chat** — persistent AI chat interface accessible anytime; ghost proactively observes and comments on behavior; triggered automatically on stuck drift; replaces the old 3-question stuck mode form
-8. **Session recap** — focus time, drift time, switches, per-app time bars, AI-generated ghost insight
+8. **Session recap** — focus time, drift time, switches, Ghost Trail visualization, AI-generated ghost trail insight
 9. **Backboard memory** — every AI call is contextualized by persistent memory across sessions, not just current session
 
 ### Stretch Goals (in priority order)
@@ -354,8 +354,8 @@ export const MOCK_CHAT_HISTORY: ChatMessage[] = [
 
 - "session complete" header with task name + duration
 - 2×2 metric grid: focus time / drift time / switches / nudges
-- Top apps: horizontal time bars for top 3 apps (color coded by category)
-- Ghost insight box: AI-generated summary informed by Backboard historical context
+- Ghost Trail: chronological app-node visualization connected by a wavy gradient path (teal → red as focus shifts to distraction); nodes tagged start / drift portal / drift chain / recovery; tiny ghost mascot floats above the first distraction point
+- Ghost trail insight box: 2-sentence AI summary — sentence 1 names the specific trail pattern (drift portal, drift chain, focus loop, recovery), sentence 2 gives a cross-session suggestion from Backboard history
 - Start new session button (teal, full width)
 
 ### Ghost Mascot States
@@ -682,7 +682,7 @@ Everyone — feature freeze → 9am Sunday
 6. Rapid-cycle VS Code → Chrome → Terminal (simulate stuck drift)
 7. Ghost Chat opens automatically → ghost: _"noticed you've been cycling — what's snagging you?"_
 8. Type a reply → ghost responds with specific, context-aware suggestion
-9. End session → recap: time bars, metrics, ghost insight
+9. End session → recap: metrics, Ghost Trail visualization, ghost trail insight
 10. Key line: _"that insight was personalized — Backboard remembered patterns from previous sessions"_
 
 ### Devpost Description Structure
