@@ -13,5 +13,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onGhostMessage:     (cb: (d: unknown) => void) => ipcRenderer.on(IPC.GHOST_MESSAGE,   (_e, d) => cb(d)),
   onChatResponse:     (cb: (d: unknown) => void) => ipcRenderer.on(IPC.CHAT_RESPONSE,   (_e, d) => cb(d)),
   onSessionRecap:     (cb: (d: unknown) => void) => ipcRenderer.on(IPC.SESSION_RECAP,   (_e, d) => cb(d)),
+  onNudgeDismissed:   (cb: () => void)            => ipcRenderer.on(IPC.NUDGE_DISMISSED, () => cb()),
+  debugNudge:         (type: string)               => ipcRenderer.invoke(IPC.DEBUG_NUDGE, type),
   removeAllListeners: (channel: string)           => ipcRenderer.removeAllListeners(channel),
 });
