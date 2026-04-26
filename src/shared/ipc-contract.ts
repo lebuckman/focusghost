@@ -99,11 +99,11 @@ export interface AppSettings {
   inactivityThreshold: number;
   nudgeEnabled: boolean;
   voiceEnabled: boolean;
-  opacity: number;
   accentColor: 'teal' | 'violet' | 'amber';
   nudgeSensitivity: 'gentle' | 'balanced' | 'strict';
   alwaysOnTop: boolean;
   autoCollapse: boolean;
+  autoDim: boolean;
 }
 
 export interface ActiveSession {
@@ -128,11 +128,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   inactivityThreshold: 90, // demo: 1m30s — raise to 300 (5min) for production
   nudgeEnabled: true,
   voiceEnabled: false,
-  opacity: 0.9,
   accentColor: 'teal',
   nudgeSensitivity: 'balanced',
   alwaysOnTop: true,
   autoCollapse: false,
+  autoDim: false,
 };
 
 export const MOCK_SESSION_UPDATE: SessionUpdate = {
