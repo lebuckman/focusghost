@@ -9,11 +9,14 @@ const BROWSER_SUFFIXES = [
   ' - Arc',
   ' - Brave Browser',
   ' - Opera',
+  ' - Zen Browser',
+  ' - Zen',
 ];
 
 const BROWSER_NAMES = [
   'Google Chrome', 'Chrome', 'Mozilla Firefox', 'Firefox',
   'Microsoft Edge', 'Safari', 'Arc', 'Brave Browser', 'Opera',
+  'Zen Browser', 'Zen',
 ];
 
 export function extractTabTitle(
