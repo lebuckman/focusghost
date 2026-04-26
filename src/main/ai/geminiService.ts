@@ -66,7 +66,7 @@ function getFallbackNudge(driftType: DriftType): string {
   return `You drifted away from your task for a bit. Want to close distractions and do one focused pass together?`;
 }
 
-function getFallbackChat(task: string): string {
+function getFallbackChat(_task: string): string {
   return "Got you. Let's shrink it to one step. What's the exact thing you're trying to finish right now?";
 }
 
@@ -371,22 +371,26 @@ export async function geminiGenerateInsight(
   const fallback = getFallbackInsight(session);
   const totalSec = Math.max(1, session.focusSec + session.driftSec);
   const focusPct = Math.round((session.focusSec / totalSec) * 100);
+  const recentApps = getRecentApps(session, 8);
   const trail = analyzeTrail(session.switchLog);
 
   const prompt = [
     AI_COPY.insightTone,
-    `Write a ghost trail insight in 2 short sentences. The first sentence must name the specific attention pattern you see in the trail (drift portal, drift chain, focus loop, or recovery). The second sentence gives one concrete suggestion for next time.`,
+    `Write a ghost trail insight in exactly 2 short sentences.`,
+    `Sentence 1: describe the specific attention pattern visible in the trail — name the actual apps (drift portal, drift chain, focus loop, or recovery moment). Be specific, not generic.`,
+    `Sentence 2: give one concrete suggestion informed by the user's historical patterns from Backboard. If no history exists, suggest something based on this session's stats.`,
     `Task: "${session.task}"`,
     `Duration target: ${session.durationMin} min`,
     `Focus rate: ${focusPct}%`,
     `Switches: ${session.switchCount}`,
+    `Recent apps: ${recentApps.join(", ") || "none"}`,
     `Attention trail: ${trail.sequence}`,
     `Drift portal (focus→distraction gateway): ${trail.driftPortal ?? "none"}`,
     `Drift chain (consecutive distractions): ${trail.driftChain ?? "none"}`,
     `Focus loop (productive cycle): ${trail.focusLoop ?? "none"}`,
     `Recovery moment (distraction→focus return): ${trail.recovery ?? "none"}`,
     `Historical patterns from Backboard: "${formatContext(backboardContext)}"`,
-    `Write in lowercase, casual tone. Name the specific apps from the trail. No preamble, no labels. Return only the insight text.`,
+    `Write in lowercase, casual tone. No preamble, no labels, no markdown. Return only the two sentences.`,
   ].join("\n");
 
   const text = await generateText(prompt);
