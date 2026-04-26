@@ -184,7 +184,31 @@ export default function Settings({ settings, onBack, onChange }: Props) {
             })}
           </div>
         </div>
+        
+        {/* Nudges enabled */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 12, color: '#e5e5e5' }}>nudges</div>
+            <div style={{ fontSize: 10, color: '#737373', marginTop: 2 }}>ghost speaks up when it detects distraction or drift</div>
+          </div>
+          <Toggle on={settings.nudgeEnabled} onChange={v => onChange({ nudgeEnabled: v })} accent={accent} />
+        </div>
 
+        {/* Drift threshold */}
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div style={{ fontSize: 12, color: '#e5e5e5' }}>drift threshold</div>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: accent, fontVariantNumeric: 'tabular-nums' }}>
+              {thresholdMin} min
+            </div>
+          </div>
+          <input
+            type="range" min={1} max={10} value={thresholdMin}
+            onChange={e => onChange({ inactivityThreshold: Number(e.target.value) * 60 })}
+            style={{ width: '100%', accentColor: accent, cursor: 'pointer' }}
+          />
+        </div>
+        
         {/* Inactivity timeout */}
         <div style={{ marginBottom: 18 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
@@ -201,14 +225,57 @@ export default function Settings({ settings, onBack, onChange }: Props) {
           />
         </div>
 
-        {/* Nudges enabled */}
+        {/* Proactive insights */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: 12, color: '#e5e5e5' }}>nudges</div>
-            <div style={{ fontSize: 10, color: '#737373', marginTop: 2 }}>ghost speaks up when it detects distraction or drift</div>
+            <div style={{ fontSize: 12, color: '#e5e5e5' }}>proactive insights</div>
+            <div style={{ fontSize: 10, color: '#737373', marginTop: 2 }}>ghost shares patterns it notices mid-session</div>
           </div>
           <Toggle on={settings.nudgeEnabled} onChange={v => onChange({ nudgeEnabled: v })} accent={accent} />
         </div>
+            
+        {/* Divider */}
+        <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.06)', marginBottom: 18 }} />
+
+        {/* ── VOICE ─────────────────────────────────────────────────────────── */}
+        <SectionLabel>voice</SectionLabel>
+        
+        {/* Voice Enabled */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 12, color: '#e5e5e5' }}>voice enabled</div>
+            <div style={{ fontSize: 10, color: '#737373', marginTop: 2 }}>ghost speaks up when you drift</div>
+          </div>
+          <Toggle on={settings.voiceEnabled} onChange={v => onChange({ voiceEnabled: v })} accent={accent} />
+        </div>
+        
+        {/* Personality */}
+        {settings.voiceEnabled &&<div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 12, color: '#e5e5e5', marginBottom: 3 }}>personality</div>
+          <div style={{ fontSize: 10, color: '#737373', marginBottom: 8 }}>text-to-speech tone of voice</div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {(['supportive', 'playful', 'drill-sergeant'] as const).map(p => {
+              const sel = settings.personality === p;
+              return (
+                <button
+                  key={p}
+                  onClick={() => onChange({ personality: p })}
+                  style={{
+                    flex: 1, background: sel ? 'rgba(255,255,255,0.06)' : '#1a1a1a',
+                    border: `0.5px solid ${sel ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                    borderRadius: 5, padding: '7px 0', fontSize: 11,
+                    color: sel ? accent : '#737373', fontFamily: 'inherit',
+                    cursor: 'pointer', transition: 'all 0.15s',
+                  }}
+                >
+                  {p}
+                </button>
+              );
+            })}
+          </div>
+        </div>}
+
+        
       </div>
     </div>
   );
