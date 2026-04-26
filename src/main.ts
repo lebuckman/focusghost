@@ -1,4 +1,7 @@
+import 'dotenv/config';
+
 import { app, BrowserWindow, ipcMain } from 'electron';
+import { initializeBackboard } from './main/ai/backboardService';
 import path from 'path';
 import started from 'electron-squirrel-startup';
 import {
@@ -263,8 +266,10 @@ const createWindow = () => {
   mainWindow.on('closed', () => { mainWindow = null; });
 };
 
-app.on('ready', () => {
-  registerIPC();
+app.on('ready', async () => {
+  const backboardKey = process.env.BACKBOARD_API_KEY ?? '';
+  initializeBackboard(backboardKey);
+  await initializeBackboard(process.env.BACKBOARD_API_KEY ?? '');
   createWindow();
 });
 
