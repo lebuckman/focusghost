@@ -288,7 +288,7 @@ export async function geminiGenerateNudge(
     AI_COPY.nudgeFormat,
     AI_COPY.nudgeConstraint,
     AI_COPY.noLecture,
-    AI_COPY.cutesyness,
+    AI_COPY.cuteness,
     AI_COPY.lowercaseOnly,
   ].join("\n");
 
