@@ -35,7 +35,12 @@ import {
   generateInsight,
   generateNudgeMessage,
   recordSessionMemory,
+<<<<<<< HEAD
 } from "./main/ai/aiOrchestrator";
+=======
+} from './main/ai/aiOrchestrator';
+import { speakNudge, stopNudgeSpeech } from './main/voice/elevenLabsService';
+>>>>>>> 6aa41db (refactor(new elevenlabs))
 
 if (started) app.quit();
 
@@ -301,6 +306,8 @@ async function fireNudge(payload: NudgePayload): Promise<boolean> {
   } else {
     showCheckinNudge(mainWindow, finalPayload);
   }
+
+  void speakNudge(finalPayload.message, settings);
   return true;
 }
 
@@ -331,7 +338,7 @@ async function checkDistractionDrift(
   }
 
   const consecutiveSec = (now - session.distractionStartTime) / 1000;
-  if (consecutiveSec < 90) return; // demo: 1m30s — raise to 180+ for production
+  if (consecutiveSec < 0) return; // demo: 1m30s — raise to 180+ for production
 
   const windowStart = now - 10 * 60 * 1000;
   const history = session.distractionHistory[appName] ?? [];
@@ -676,10 +683,15 @@ function endSession() {
   const endedSession = session;
   if (endedSession.pollTimer) clearInterval(endedSession.pollTimer);
   if (endedSession.endTimer) clearTimeout(endedSession.endTimer);
+<<<<<<< HEAD
   if (titleSettleTimer) {
     clearTimeout(titleSettleTimer);
     titleSettleTimer = null;
   }
+=======
+  if (titleSettleTimer) { clearTimeout(titleSettleTimer); titleSettleTimer = null; }
+  void stopNudgeSpeech();
+>>>>>>> 6aa41db (refactor(new elevenlabs))
   session = null;
 
   void (async () => {
@@ -784,6 +796,7 @@ function registerIPC() {
   );
 
   ipcMain.handle(IPC.DISMISS_NUDGE, () => {
+    void stopNudgeSpeech();
     if (isNudgeWindowOpen()) {
       closeNudgeWindow();
     } else {

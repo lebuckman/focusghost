@@ -154,6 +154,7 @@ export interface AppSettings {
   inactivityThreshold: number;
   nudgeEnabled: boolean;
   voiceEnabled: boolean;
+  personality: 'supportive' | 'playful' | 'drill-sergeant';
   opacity: number;
   accentColor: "teal" | "violet" | "amber";
   nudgeSensitivity: "gentle" | "balanced" | "strict";
@@ -183,6 +184,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   inactivityThreshold: 30, // demo: 1m30s — raise to 300 (5min) for production
   nudgeEnabled: true,
   voiceEnabled: false,
+  personality: 'supportive',
   opacity: 0.9,
   accentColor: "teal",
   nudgeSensitivity: "balanced",
