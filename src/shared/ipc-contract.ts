@@ -8,6 +8,7 @@ export const IPC = {
   END_SESSION:     'END_SESSION',
   CHAT_MESSAGE:    'CHAT_MESSAGE',
   DISMISS_NUDGE:   'DISMISS_NUDGE',
+  NUDGE_ACTION:    'NUDGE_ACTION',
   UPDATE_SETTINGS: 'UPDATE_SETTINGS',
   SESSION_UPDATE:  'SESSION_UPDATE',
   TRIGGER_NUDGE:   'TRIGGER_NUDGE',
@@ -15,16 +16,21 @@ export const IPC = {
   GHOST_MESSAGE:   'GHOST_MESSAGE',
   CHAT_RESPONSE:   'CHAT_RESPONSE',
   SESSION_RECAP:   'SESSION_RECAP',
+  DEBUG_NUDGE:     'DEBUG_NUDGE',
+  NUDGE_DISMISSED: 'NUDGE_DISMISSED',
 } as const;
 
 export type IPCChannel = (typeof IPC)[keyof typeof IPC];
 
 export type WindowCategory = 'focus' | 'research' | 'distraction' | 'inactive' | 'unknown';
 export type DriftType = 'frequency' | 'distraction' | 'stuck';
+export type NudgeType =
+  | 'distraction-firm' | 'distraction-hard' | 'stuck-helpful'
+  | 'idle-soft' | 'pattern-observational' | 'milestone-positive' | 'in-app';
 export type GhostMascotState = 'calm' | 'concerned' | 'thinking' | 'happy' | 'sleepy';
 export type GhostMessageTrigger = 'stuck_drift' | 'distraction_drift' | 'frequency_drift' | 'proactive' | 'user_reply';
 
-export interface SwitchEntry { app: string; category: WindowCategory; timestamp: number; }
+export interface SwitchEntry { app: string; category: WindowCategory; timestamp: number; title?: string; }
 export interface ChatEntry   { role: 'user' | 'ghost'; content: string; timestamp: number; }
 export interface NudgeEntry  { message: string; driftType: DriftType; timestamp: number; }
 
@@ -33,8 +39,10 @@ export interface DismissNudgePayload  { action: 'acknowledged' | 'break'; }
 export interface ChatMessagePayload   { message: string; chatHistory: ChatEntry[]; }
 
 export interface SessionUpdate {
-  currentApp: string;
+  currentApp: string;          // display name: extracted tab title for browsers, app name otherwise
+  currentAppProcess: string;   // raw OS app name — used for categorization, never displayed
   currentAppBundle: string;
+  currentAppTitle: string;
   category: WindowCategory;
   switchCount: number;
   elapsedSec: number;
@@ -44,7 +52,22 @@ export interface SessionUpdate {
   recentSwitches: SwitchEntry[];
 }
 
-export interface NudgePayload        { message: string; driftType: DriftType; urgent: boolean; }
+export interface NudgePayload {
+  type: NudgeType;
+  tier: 1 | 2;
+  message: string;
+  driftType: DriftType;
+  context?: {
+    task?: string;
+    appName?: string;
+    driftDurationSec?: number;
+    investedSec?: number;
+    remainingSec?: number;
+    occurrences?: number;
+    streakDays?: number;
+    blockUntil?: number;
+  };
+}
 export interface OpenGhostChatPayload { trigger: DriftType; }
 export interface GhostMessagePayload  { message: string; trigger: GhostMessageTrigger; timestamp: number; }
 export interface ChatResponsePayload  { message: string; timestamp: number; }
@@ -101,8 +124,8 @@ export interface AppStore {
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  driftThreshold: 4,
-  inactivityThreshold: 300,
+  driftThreshold: 7,
+  inactivityThreshold: 90, // demo: 1m30s — raise to 300 (5min) for production
   nudgeEnabled: true,
   voiceEnabled: false,
   opacity: 0.9,
@@ -114,7 +137,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
 
 export const MOCK_SESSION_UPDATE: SessionUpdate = {
   currentApp: 'Visual Studio Code',
+  currentAppProcess: 'Visual Studio Code',
   currentAppBundle: 'com.microsoft.VSCode',
+  currentAppTitle: 'src/main.ts — focusghost',
   category: 'focus',
   switchCount: 3,
   elapsedSec: 720,

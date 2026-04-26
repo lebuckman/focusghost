@@ -6,6 +6,7 @@ declare global {
       endSession:         () => Promise<void>;
       sendChat:           (payload: unknown) => Promise<void>;
       dismissNudge:       () => Promise<void>;
+      debugNudge:         (type: string) => Promise<void>;
       updateSettings:     (payload: unknown) => Promise<void>;
       onSessionUpdate:    (cb: (data: unknown) => void) => void;
       onNudge:            (cb: (data: unknown) => void) => void;
@@ -13,6 +14,7 @@ declare global {
       onGhostMessage:     (cb: (data: unknown) => void) => void;
       onChatResponse:     (cb: (data: unknown) => void) => void;
       onSessionRecap:     (cb: (data: unknown) => void) => void;
+      onNudgeDismissed:   (cb: () => void) => void;
       removeAllListeners: (channel: string) => void;
     };
   }
