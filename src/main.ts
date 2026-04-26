@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import { app, BrowserWindow, ipcMain, powerMonitor } from 'electron';
+import { app, BrowserWindow, ipcMain, powerMonitor, Menu } from 'electron';
 import { extractTabTitle } from './main/get-browser-tab';
 import { showInterruptNudge, closeNudgeWindow, isNudgeWindowOpen } from './main/nudge-window';
 import path from 'path';
@@ -305,7 +305,7 @@ function buildSessionUpdate(elapsedSec: number, appName: string, bundleId: strin
     focusSec: session.focusSec,
     driftSec: session.driftSec,
     ghostState: deriveGhostState(category, session.driftSec),
-    recentSwitches: session.switchLog.slice(-5).reverse(),
+    recentSwitches: session.switchLog.slice(-8).reverse(),
   };
 }
 
@@ -616,14 +616,22 @@ function registerIPC() {
   });
 }
 
+// ── Window controls ───────────────────────────────────────────────────────────
+
+ipcMain.on('WINDOW_CLOSE',    () => mainWindow?.close());
+ipcMain.on('WINDOW_MINIMIZE', () => mainWindow?.minimize());
+
 // ── Window ────────────────────────────────────────────────────────────────────
 
 const createWindow = () => {
+  Menu.setApplicationMenu(null);
+
   mainWindow = new BrowserWindow({
     width: 380,
     height: 620,
     alwaysOnTop: true,
-    frame: true,
+    titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
+    trafficLightPosition: process.platform === 'darwin' ? { x: 10, y: 11 } : undefined,
     resizable: true,
     movable: true,
     webPreferences: {

@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import GhostMascot from '../components/GhostMascot';
 import AppBadge from '../components/AppBadge';
 import MetricChip from '../components/MetricChip';
-import type { SessionUpdate, WindowCategory } from '../../shared/ipc-contract';
+import type { SessionUpdate, SwitchEntry, WindowCategory } from '../../shared/ipc-contract';
 
 interface Props {
   task: string;
@@ -10,6 +10,8 @@ interface Props {
   sessionUpdate: SessionUpdate;
   onOpenChat: () => void;
 }
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function fmtCountdown(sec: number): string {
   const s = Math.max(0, sec);
@@ -22,10 +24,85 @@ function fmtDuration(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   if (m === 0) return `${s}s`;
-  return `${m}m`;
+  if (s === 0) return `${m}m`;
+  return `${m}m ${s}s`;
 }
 
-const CATEGORY_DOT: Record<WindowCategory, string> = {
+function fmtDur(sec: number, isFirst: boolean): string {
+  if (isFirst && sec < 30) return 'now';
+  return fmtDuration(sec);
+}
+
+// Extracts sub-context from a window title, stripping app-name suffixes.
+// "App.jsx — focusghost — Visual Studio Code" → "App.jsx"
+// "#general — Discord" → "#general"
+// Returns null when result equals the app name (nothing useful to show).
+function deriveSubLabel(title: string | undefined, appName: string): string | null {
+  if (!title) return null;
+  const knownSuffixes = [
+    'Visual Studio Code', 'VS Code', 'Discord', 'Google Chrome', 'Safari',
+    'Firefox', 'Notion', 'Obsidian', 'Slack', 'Figma', 'Spotify',
+  ];
+  let result = title;
+  // Strip known app suffixes (e.g. " — Visual Studio Code" or " - Discord")
+  for (const suffix of [appName, ...knownSuffixes]) {
+    result = result.replace(new RegExp(`\\s*[\\-—|]\\s*${suffix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.*$`, 'i'), '').trim();
+  }
+  if (!result || result.toLowerCase() === appName.toLowerCase()) return null;
+  return result;
+}
+
+// ─── App Icon ────────────────────────────────────────────────────────────────
+
+const APP_ICONS: Record<string, { glyph: string; fg: string; bg: string }> = {
+  'VS Code':          { glyph: '</>',  fg: '#60a5fa', bg: 'rgba(96,165,250,0.12)' },
+  'Visual Studio Code':{ glyph: '</>',  fg: '#60a5fa', bg: 'rgba(96,165,250,0.12)' },
+  'Cursor':           { glyph: '</>',  fg: '#60a5fa', bg: 'rgba(96,165,250,0.12)' },
+  'WebStorm':         { glyph: 'WS',   fg: '#60a5fa', bg: 'rgba(96,165,250,0.12)' },
+  'Terminal':         { glyph: '›_',   fg: '#5dd8e6', bg: 'rgba(93,216,230,0.12)' },
+  'iTerm2':           { glyph: '›_',   fg: '#5dd8e6', bg: 'rgba(93,216,230,0.12)' },
+  'Discord':          { glyph: '💬',   fg: '#a78bfa', bg: 'rgba(167,139,250,0.12)' },
+  'YouTube':          { glyph: '▶',    fg: '#f87171', bg: 'rgba(248,113,113,0.14)' },
+  'Twitter':          { glyph: '✕',    fg: '#f87171', bg: 'rgba(248,113,113,0.12)' },
+  'X':                { glyph: '✕',    fg: '#f87171', bg: 'rgba(248,113,113,0.12)' },
+  'Reddit':           { glyph: 'R',    fg: '#fb923c', bg: 'rgba(251,146,60,0.12)' },
+  'Instagram':        { glyph: '◯',    fg: '#f472b6', bg: 'rgba(244,114,182,0.12)' },
+  'TikTok':           { glyph: '♪',    fg: '#f472b6', bg: 'rgba(244,114,182,0.12)' },
+  'Twitch':           { glyph: '▶',    fg: '#a78bfa', bg: 'rgba(167,139,250,0.12)' },
+  'Chrome':           { glyph: '◎',    fg: '#5dd8e6', bg: 'rgba(93,216,230,0.12)' },
+  'Google Chrome':    { glyph: '◎',    fg: '#5dd8e6', bg: 'rgba(93,216,230,0.12)' },
+  'Safari':           { glyph: '◎',    fg: '#5dd8e6', bg: 'rgba(93,216,230,0.12)' },
+  'Firefox':          { glyph: '◎',    fg: '#fb923c', bg: 'rgba(251,146,60,0.12)' },
+  'Notion':           { glyph: 'N',    fg: '#e5e5e5', bg: 'rgba(229,229,229,0.10)' },
+  'Obsidian':         { glyph: '◆',    fg: '#a78bfa', bg: 'rgba(167,139,250,0.12)' },
+  'Figma':            { glyph: 'F',    fg: '#f472b6', bg: 'rgba(244,114,182,0.12)' },
+  'Spotify':          { glyph: '♫',    fg: '#34d399', bg: 'rgba(52,211,153,0.12)' },
+  'Slack':            { glyph: '#',    fg: '#34d399', bg: 'rgba(52,211,153,0.12)' },
+  'ChatGPT':          { glyph: '✺',    fg: '#34d399', bg: 'rgba(52,211,153,0.12)' },
+  'Stack Overflow':   { glyph: 'S',    fg: '#fb923c', bg: 'rgba(251,146,60,0.12)' },
+  'Zoom':             { glyph: '⬡',    fg: '#60a5fa', bg: 'rgba(96,165,250,0.12)' },
+  '(idle)':           { glyph: '◌',    fg: '#737373', bg: 'rgba(115,115,115,0.12)' },
+};
+
+function AppIcon({ app, size = 28 }: { app: string; size?: number }) {
+  const ic = APP_ICONS[app] ?? { glyph: app.charAt(0).toUpperCase(), fg: '#a3a3a3', bg: 'rgba(255,255,255,0.06)' };
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: 6,
+      background: ic.bg, border: `0.5px solid ${ic.fg}33`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0, fontSize: size * 0.38,
+      fontFamily: "'JetBrains Mono', monospace",
+      color: ic.fg, fontWeight: 600, letterSpacing: '-0.04em',
+    }}>
+      {ic.glyph}
+    </div>
+  );
+}
+
+// ─── Activity Grouping ───────────────────────────────────────────────────────
+
+const CATEGORY_COLOR: Record<WindowCategory, string> = {
   focus:       '#2dd4bf',
   research:    '#60a5fa',
   distraction: '#f87171',
@@ -33,65 +110,75 @@ const CATEGORY_DOT: Record<WindowCategory, string> = {
   unknown:     '#737373',
 };
 
+interface ActivityEntry {
+  sub: string | null;
+  durationSec: number;
+  isFirst: boolean;
+  category: WindowCategory;
+}
+
+interface ActivityGroup {
+  app: string;
+  category: WindowCategory;
+  entries: ActivityEntry[];
+}
+
+function groupSwitches(switches: SwitchEntry[]): ActivityGroup[] {
+  const now = Date.now();
+  const groups: ActivityGroup[] = [];
+
+  switches.forEach((sw, i) => {
+    const prevTimestamp = i === 0 ? now : switches[i - 1].timestamp;
+    const durationSec = Math.max(0, Math.round((prevTimestamp - sw.timestamp) / 1000));
+    const sub = deriveSubLabel(sw.title, sw.app);
+    const entry: ActivityEntry = { sub, durationSec, isFirst: i === 0, category: sw.category };
+
+    const last = groups[groups.length - 1];
+    if (last && last.app === sw.app) {
+      last.entries.push(entry);
+    } else {
+      groups.push({ app: sw.app, category: sw.category, entries: [entry] });
+    }
+  });
+
+  return groups;
+}
+
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
 const iconBtn: React.CSSProperties = {
-  background: 'transparent',
-  border: 'none',
-  width: 22,
-  height: 22,
-  padding: 0,
-  borderRadius: 4,
-  cursor: 'pointer',
-  color: '#737373',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
+  background: 'transparent', border: 'none',
+  width: 22, height: 22, padding: 0, borderRadius: 4,
+  cursor: 'pointer', color: '#737373',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
 };
 
-export default function ActiveSession({ task, durationMin, sessionUpdate, onOpenChat }: Props) {
-  // endSession IPC is fired from the button directly; session recap listener lives in App
-  useEffect(() => {
-    // nothing to register — all IPC listeners live in App.tsx
-  }, []);
+// ─── Component ───────────────────────────────────────────────────────────────
 
+export default function ActiveSession({ task, durationMin, sessionUpdate, onOpenChat }: Props) {
   const durationSec = durationMin * 60;
   const remaining = Math.max(0, durationSec - sessionUpdate.elapsedSec);
   const progress = Math.min(1, sessionUpdate.elapsedSec / Math.max(1, durationSec));
+  const groups = groupSwitches(sessionUpdate.recentSwitches);
 
   return (
-    <div
-      style={{
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        fontFamily: "'Inter', sans-serif",
-        color: '#e5e5e5',
-        overflow: 'hidden',
-      }}
-    >
+    <div style={{
+      position: 'relative', display: 'flex', flexDirection: 'column',
+      height: '100%', fontFamily: "'Inter', sans-serif", color: '#e5e5e5', overflow: 'hidden',
+    }}>
       {/* Header */}
       <div style={{ padding: '14px 16px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8 }}>
           <div style={{
-            fontSize: 12,
-            color: '#e5e5e5',
-            fontWeight: 500,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            flex: 1,
-            minWidth: 0,
-            letterSpacing: '-0.01em',
+            fontSize: 12, color: '#e5e5e5', fontWeight: 500,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            flex: 1, minWidth: 0, letterSpacing: '-0.01em',
           }}>
             {task}
           </div>
           <div style={{
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: 13,
-            color: '#2dd4bf',
-            fontWeight: 500,
-            fontVariantNumeric: 'tabular-nums',
-            flexShrink: 0,
+            fontFamily: "'JetBrains Mono', monospace", fontSize: 13,
+            color: '#2dd4bf', fontWeight: 500, fontVariantNumeric: 'tabular-nums', flexShrink: 0,
           }}>
             {fmtCountdown(remaining)}
           </div>
@@ -112,10 +199,7 @@ export default function ActiveSession({ task, durationMin, sessionUpdate, onOpen
 
       {/* Current app row */}
       <div style={{
-        padding: '12px 16px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
+        padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10,
         borderBottom: '0.5px solid rgba(255,255,255,0.06)',
       }}>
         <div style={{ fontSize: 10, color: '#737373', textTransform: 'uppercase', letterSpacing: '0.08em' }}>now</div>
@@ -138,23 +222,75 @@ export default function ActiveSession({ task, durationMin, sessionUpdate, onOpen
           recent activity
         </div>
         <div className="fg-scroll" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {sessionUpdate.recentSwitches.length === 0 && (
+          {groups.length === 0 && (
             <div style={{ fontSize: 11, color: '#525252', fontStyle: 'italic' }}>no switches yet</div>
           )}
-          {sessionUpdate.recentSwitches.slice(0, 5).map((sw, i) => {
-            const useTitleForDisplay = sw.title && (sw.category === 'research' || sw.category === 'distraction' || sw.category === 'unknown');
-            const rawLabel = useTitleForDisplay ? sw.title! : sw.app;
-            const label = rawLabel.length > 34 ? rawLabel.slice(0, 34) + '…' : rawLabel;
+          {groups.map((group, gi) => {
+            const borderColor = CATEGORY_COLOR[group.category] ?? '#737373';
+            const isSingle = group.entries.length === 1;
+            const onlyEntry = group.entries[0];
+            const showSubRows = !isSingle || (onlyEntry?.sub !== null && onlyEntry?.sub !== undefined);
+
             return (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, opacity: 1 - i * 0.12 }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: CATEGORY_DOT[sw.category] ?? '#737373', flexShrink: 0 }} />
-              <div style={{ flex: 1, color: '#d4d4d4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {label}
+              <div key={gi} style={{
+                background: 'rgba(255,255,255,0.025)',
+                border: '0.5px solid rgba(255,255,255,0.06)',
+                borderLeft: `2px solid ${borderColor}`,
+                borderRadius: 6, padding: '8px 10px',
+                display: 'flex', gap: 10, alignItems: 'flex-start',
+                opacity: 1 - gi * 0.06,
+              }}>
+                <AppIcon app={group.app} size={28} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {/* App name row */}
+                  <div style={{
+                    fontSize: 11, fontWeight: 500, color: '#e5e5e5',
+                    letterSpacing: '-0.005em',
+                    marginBottom: showSubRows ? 4 : 0,
+                    display: 'flex', justifyContent: 'space-between', gap: 8,
+                  }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {group.app}
+                    </span>
+                    {/* Duration in header only when single entry with no sub-label */}
+                    {isSingle && !onlyEntry?.sub && (
+                      <span style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: 10, fontVariantNumeric: 'tabular-nums', flexShrink: 0,
+                        color: onlyEntry.isFirst && onlyEntry.durationSec < 30 ? borderColor : '#737373',
+                      }}>
+                        {fmtDur(onlyEntry.durationSec, onlyEntry.isFirst)}
+                      </span>
+                    )}
+                  </div>
+                  {/* Sub-rows */}
+                  {showSubRows && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {group.entries.map((e, ei) => (
+                        <div key={ei} style={{
+                          display: 'flex', justifyContent: 'space-between',
+                          alignItems: 'baseline', gap: 8, fontSize: 10,
+                        }}>
+                          <span style={{
+                            color: '#a3a3a3', overflow: 'hidden',
+                            textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            flex: 1, minWidth: 0,
+                          }}>
+                            {e.sub ?? '·'}
+                          </span>
+                          <span style={{
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontSize: 9.5, fontVariantNumeric: 'tabular-nums', flexShrink: 0,
+                            color: e.isFirst && e.durationSec < 30 ? borderColor : '#737373',
+                          }}>
+                            {fmtDur(e.durationSec, e.isFirst)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: '#737373', fontVariantNumeric: 'tabular-nums' }}>
-                {new Date(sw.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </div>
-            </div>
             );
           })}
         </div>
@@ -165,15 +301,11 @@ export default function ActiveSession({ task, durationMin, sessionUpdate, onOpen
         <button
           onClick={() => window.electronAPI.endSession()}
           style={{
-            flex: 1,
-            background: 'transparent',
+            flex: 1, background: 'transparent',
             border: '0.5px solid rgba(248,113,113,0.3)',
-            borderRadius: 5,
-            padding: '8px 0',
-            fontSize: 11,
-            color: '#f87171',
-            fontFamily: 'inherit',
-            cursor: 'pointer',
+            borderRadius: 5, padding: '8px 0',
+            fontSize: 11, color: '#f87171',
+            fontFamily: 'inherit', cursor: 'pointer',
           }}
         >
           end session
@@ -181,13 +313,7 @@ export default function ActiveSession({ task, durationMin, sessionUpdate, onOpen
       </div>
 
       {/* Ghost mascot */}
-      <div style={{
-        position: 'absolute',
-        bottom: 58,
-        right: 12,
-        pointerEvents: 'none',
-        transition: 'opacity 0.3s',
-      }}>
+      <div style={{ position: 'absolute', bottom: 58, right: 12, pointerEvents: 'none', transition: 'opacity 0.3s' }}>
         <GhostMascot state={sessionUpdate.ghostState} size={40} />
       </div>
     </div>
