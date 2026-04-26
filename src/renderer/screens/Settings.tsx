@@ -217,6 +217,33 @@ export default function Settings({ settings, onBack, onChange }: Props) {
           </div>
           <Toggle on={settings.voiceEnabled} onChange={v => onChange({ voiceEnabled: v })} accent={accent} />
         </div>
+        
+        {/* Personality */}
+        {settings.voiceEnabled &&<div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 12, color: '#e5e5e5', marginBottom: 3 }}>personality</div>
+          <div style={{ fontSize: 10, color: '#737373', marginBottom: 8 }}>text to speechtone of voice</div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {(['supportive', 'playful', 'drill-sergeant'] as const).map(p => {
+              const sel = settings.personality === p;
+              return (
+                <button
+                  key={p}
+                  onClick={() => onChange({ personality: p })}
+                  style={{
+                    flex: 1, background: sel ? 'rgba(255,255,255,0.06)' : '#1a1a1a',
+                    border: `0.5px solid ${sel ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                    borderRadius: 5, padding: '7px 0', fontSize: 11,
+                    color: sel ? accent : '#737373', fontFamily: 'inherit',
+                    cursor: 'pointer', transition: 'all 0.15s',
+                  }}
+                >
+                  {p}
+                </button>
+              );
+            })}
+          </div>
+        </div>}
+
       </div>
     </div>
   );
