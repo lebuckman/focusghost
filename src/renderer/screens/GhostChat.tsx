@@ -1,13 +1,11 @@
-import React, { useEffect, useRef, useState } from "react";
-import GhostMascot from "../components/GhostMascot";
-import type {
-  ChatEntry,
-  GhostMessagePayload,
-  ChatResponsePayload,
-} from "../../shared/ipc-contract";
-import { IPC } from "../../shared/ipc-contract";
+import { useEffect, useRef, useState } from 'react';
+import GhostMascot from '../components/GhostMascot';
+import type { ChatEntry, GhostMessagePayload, ChatResponsePayload } from '../../shared/ipc-contract';
+import { IPC } from '../../shared/ipc-contract';
 
 interface Props {
+  task: string;
+  trigger?: string;
   onBack: () => void;
 }
 
@@ -19,13 +17,28 @@ function relativeTime(timestamp: number): string {
   return `${Math.floor(m / 60)}h ago`;
 }
 
-export default function GhostChat({ onBack }: Props) {
+export default function GhostChat({ task, trigger, onBack }: Props) {
   const [chatHistory, setChatHistory] = useState<ChatEntry[]>([]);
-  const [input, setInput] = useState("");
-  const [isThinking, setIsThinking] = useState(false);
+  const [input, setInput]             = useState('');
+  const [isThinking, setIsThinking]   = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Track whether we've already shown the opening greeting
+  const greeted = useRef(false);
 
   useEffect(() => {
+    // Ghost greeting on first open — only once per mount
+    if (!greeted.current) {
+      greeted.current = true;
+      const greeting: ChatEntry = {
+        role: 'ghost',
+        content: trigger === 'stuck'
+          ? `looks like you might be stuck on "${task}" — what's blocking you? (syntax error, logic issue, or just not sure where to start?)`
+          : `hey — i'm here while you work on "${task}". i'll stay quiet unless something changes.`,
+        timestamp: Date.now(),
+      };
+      setChatHistory([greeting]);
+    }
+
     window.electronAPI.onGhostMessage((d) => {
       const m = d as GhostMessagePayload;
       setChatHistory((h) => [
@@ -48,7 +61,6 @@ export default function GhostChat({ onBack }: Props) {
     };
   }, []);
 
-  // Auto-scroll on new messages
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -68,10 +80,6 @@ export default function GhostChat({ onBack }: Props) {
     setChatHistory(next);
     setIsThinking(true);
     window.electronAPI.sendChat({ message: text, chatHistory: next });
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") sendMessage();
   };
 
   return (
@@ -163,6 +171,21 @@ export default function GhostChat({ onBack }: Props) {
           gap: 12,
         }}
       >
+        {trigger === 'stuck' && (
+          <div style={{
+            background: 'rgba(250,204,21,0.06)',
+            border: '0.5px solid rgba(250,204,21,0.25)',
+            borderRadius: 8,
+            padding: '10px 12px',
+          }}>
+            <div style={{ fontSize: 10, color: '#facc15', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 4 }}>
+              ↳ stuck mode activated
+            </div>
+            <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.4 }}>
+              tell me what's snagging you and we'll work through it.
+            </div>
+          </div>
+        )}
         {chatHistory.map((msg, i) =>
           msg.role === "user" ? (
             <UserBubble key={i} entry={msg} />
@@ -195,7 +218,7 @@ export default function GhostChat({ onBack }: Props) {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
+            onKeyDown={(e) => { if (e.key === 'Enter') sendMessage(); }}
             placeholder="chat with your ghost…"
             style={{
               flex: 1,

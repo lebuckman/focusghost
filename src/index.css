@@ -19,8 +19,8 @@ body {
   -webkit-app-region: drag;
 }
 
-/* ...except interactive elements, which must stay clickable */
-button, input, textarea, a, select, [role="button"] {
+/* ...except interactive elements and scroll containers */
+button, input, textarea, a, select, [role="button"], .fg-scroll {
   -webkit-app-region: no-drag;
 }
 
@@ -29,10 +29,11 @@ input, textarea {
   -webkit-user-select: text;
 }
 
-/* Scrollbar */
+/* Scrollbar — hidden until hover */
 .fg-scroll::-webkit-scrollbar { width: 3px; }
 .fg-scroll::-webkit-scrollbar-track { background: transparent; }
-.fg-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.fg-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 2px; transition: background 0.2s; }
+.fg-scroll:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
 
 /* Ghost animations */
 @keyframes ghostFloat {
