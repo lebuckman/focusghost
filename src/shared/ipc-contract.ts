@@ -30,7 +30,7 @@ export type NudgeType =
 export type GhostMascotState = 'calm' | 'concerned' | 'thinking' | 'happy' | 'sleepy';
 export type GhostMessageTrigger = 'stuck_drift' | 'distraction_drift' | 'frequency_drift' | 'proactive' | 'user_reply';
 
-export interface SwitchEntry { app: string; category: WindowCategory; timestamp: number; title?: string; }
+export interface SwitchEntry { app: string; category: WindowCategory; timestamp: number; title?: string; icon?: string; }
 export interface ChatEntry   { role: 'user' | 'ghost'; content: string; timestamp: number; }
 export interface NudgeEntry  { message: string; driftType: DriftType; timestamp: number; }
 

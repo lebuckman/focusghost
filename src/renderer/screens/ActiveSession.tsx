@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import GhostMascot from '../components/GhostMascot';
 import AppBadge from '../components/AppBadge';
 import MetricChip from '../components/MetricChip';
@@ -52,6 +52,83 @@ function deriveSubLabel(title: string | undefined, appName: string): string | nu
   return result;
 }
 
+// ─── Favicon lookup ──────────────────────────────────────────────────────────
+
+// Site-specific: matched against the raw window title (newest tab/channel/file).
+// Order matters — first match wins, so more specific entries come first.
+const FAVICON_ENTRIES: Array<[string, string]> = [
+  ['youtube',            'youtube.com'],
+  ['github',             'github.com'],
+  ['stackoverflow',      'stackoverflow.com'],
+  ['stack overflow',     'stackoverflow.com'],
+  ['reddit',             'reddit.com'],
+  ['twitter',            'twitter.com'],
+  ['discord',            'discord.com'],
+  ['notion',             'notion.so'],
+  ['figma',              'figma.com'],
+  ['chatgpt',            'chat.openai.com'],
+  ['claude.ai',          'claude.ai'],
+  ['twitch',             'twitch.tv'],
+  ['netflix',            'netflix.com'],
+  ['spotify',            'spotify.com'],
+  ['instagram',          'instagram.com'],
+  ['facebook',           'facebook.com'],
+  ['linkedin',           'linkedin.com'],
+  ['google docs',        'docs.google.com'],
+  ['google sheets',      'sheets.google.com'],
+  ['vercel',             'vercel.com'],
+  ['netlify',            'netlify.com'],
+  ['slack',              'slack.com'],
+  ['zoom',               'zoom.us'],
+  ['obsidian',           'obsidian.md'],
+  ['linear',             'linear.app'],
+  ['visual studio code', 'code.visualstudio.com'],
+];
+
+// App-generic: exact app-name match → generic icon for browsers/editors.
+// Only used when no site-specific favicon matched from rawTitle.
+const APP_FAVICON_DOMAINS: Record<string, string> = {
+  'Google Chrome':   'google.com',
+  'Chrome':          'google.com',
+  'Mozilla Firefox': 'firefox.com',
+  'Firefox':         'firefox.com',
+  'Safari':          'apple.com',
+  'Arc':             'arc.net',
+  'Zen Browser':     'zen-browser.app',
+  'Brave Browser':   'brave.com',
+  'Microsoft Edge':  'microsoft.com',
+  'Cursor':          'cursor.com',
+  'Visual Studio Code': 'code.visualstudio.com',
+  'Figma':           'figma.com',
+  'Slack':           'slack.com',
+  'Discord':         'discord.com',
+  'Spotify':         'spotify.com',
+  'Notion':          'notion.so',
+  'Linear':          'linear.app',
+  'Obsidian':        'obsidian.md',
+  'Zoom':            'zoom.us',
+};
+
+function faviconUrl(domain: string) {
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+}
+
+// Stage 1: search raw window title for site-specific keywords (YouTube, GitHub, etc.)
+function lookupSiteFavicon(rawTitle: string | undefined): string | null {
+  if (!rawTitle) return null;
+  const lower = rawTitle.toLowerCase();
+  for (const [keyword, domain] of FAVICON_ENTRIES) {
+    if (lower.includes(keyword)) return faviconUrl(domain);
+  }
+  return null;
+}
+
+// Stage 2: exact app-name → generic app icon (browser, editor, etc.)
+function lookupAppFavicon(appName: string): string | null {
+  const domain = APP_FAVICON_DOMAINS[appName];
+  return domain ? faviconUrl(domain) : null;
+}
+
 // ─── App Icon ────────────────────────────────────────────────────────────────
 
 const APP_ICONS: Record<string, { glyph: string; fg: string; bg: string }> = {
@@ -84,18 +161,29 @@ const APP_ICONS: Record<string, { glyph: string; fg: string; bg: string }> = {
   '(idle)':           { glyph: '◌',    fg: '#737373', bg: 'rgba(115,115,115,0.12)' },
 };
 
-function AppIcon({ app, size = 28 }: { app: string; size?: number }) {
+function AppIcon({ app, rawTitle, size = 28 }: { app: string; rawTitle?: string; size?: number }) {
+  const imgSrc = lookupSiteFavicon(rawTitle) ?? lookupAppFavicon(app);
+  const [imgError, setImgError] = useState(false);
+  useEffect(() => { setImgError(false); }, [imgSrc]);
+
   const ic = APP_ICONS[app] ?? { glyph: app.charAt(0).toUpperCase(), fg: '#a3a3a3', bg: 'rgba(255,255,255,0.06)' };
+  const showImg = !!imgSrc && !imgError;
+
   return (
     <div style={{
       width: size, height: size, borderRadius: 6,
-      background: ic.bg, border: `0.5px solid ${ic.fg}33`,
+      background: showImg ? 'rgba(255,255,255,0.05)' : ic.bg,
+      border: `0.5px solid ${showImg ? 'rgba(255,255,255,0.10)' : ic.fg + '33'}`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      flexShrink: 0, fontSize: size * 0.38,
-      fontFamily: "'JetBrains Mono', monospace",
-      color: ic.fg, fontWeight: 600, letterSpacing: '-0.04em',
+      flexShrink: 0, overflow: 'hidden',
     }}>
-      {ic.glyph}
+      {showImg ? (
+        <img src={imgSrc} alt="" style={{ width: '70%', height: '70%', objectFit: 'contain' }} onError={() => setImgError(true)} />
+      ) : (
+        <span style={{ fontSize: size * 0.38, fontFamily: "'JetBrains Mono', monospace", color: ic.fg, fontWeight: 600, letterSpacing: '-0.04em' }}>
+          {ic.glyph}
+        </span>
+      )}
     </div>
   );
 }
@@ -120,6 +208,7 @@ interface ActivityEntry {
 interface ActivityGroup {
   app: string;
   category: WindowCategory;
+  rawTitle?: string;
   entries: ActivityEntry[];
 }
 
@@ -134,10 +223,10 @@ function groupSwitches(switches: SwitchEntry[]): ActivityGroup[] {
     const entry: ActivityEntry = { sub, durationSec, isFirst: i === 0, category: sw.category };
 
     const last = groups[groups.length - 1];
-    if (last && last.app === sw.app) {
+    if (last && last.app === sw.app && last.category === sw.category) {
       last.entries.push(entry);
     } else {
-      groups.push({ app: sw.app, category: sw.category, entries: [entry] });
+      groups.push({ app: sw.app, category: sw.category, rawTitle: sw.title, entries: [entry] });
     }
   });
 
@@ -163,8 +252,9 @@ export default function ActiveSession({ task, durationMin, sessionUpdate, onOpen
 
   return (
     <div style={{
-      position: 'relative', display: 'flex', flexDirection: 'column',
-      height: '100%', fontFamily: "'Inter', sans-serif", color: '#e5e5e5', overflow: 'hidden',
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+      display: 'flex', flexDirection: 'column',
+      fontFamily: "'Inter', sans-serif", color: '#e5e5e5', overflow: 'hidden',
     }}>
       {/* Header */}
       <div style={{ padding: '14px 16px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
@@ -221,47 +311,58 @@ export default function ActiveSession({ task, durationMin, sessionUpdate, onOpen
         <div style={{ fontSize: 9, color: '#737373', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
           recent activity
         </div>
-        <div className="fg-scroll" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div className="fg-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
           {groups.length === 0 && (
             <div style={{ fontSize: 11, color: '#525252', fontStyle: 'italic' }}>no switches yet</div>
           )}
           {groups.map((group, gi) => {
-            const borderColor = CATEGORY_COLOR[group.category] ?? '#737373';
+            const catColor = CATEGORY_COLOR[group.category] ?? '#737373';
+            const isActive = gi === 0;
             const isSingle = group.entries.length === 1;
             const onlyEntry = group.entries[0];
             const showSubRows = !isSingle || (onlyEntry?.sub !== null && onlyEntry?.sub !== undefined);
 
             return (
               <div key={gi} style={{
-                background: 'rgba(255,255,255,0.025)',
-                border: '0.5px solid rgba(255,255,255,0.06)',
-                borderLeft: `2px solid ${borderColor}`,
+                background: `linear-gradient(135deg, ${catColor}0f 0%, rgba(255,255,255,0.018) 60%)`,
+                border: `0.5px solid ${catColor}28`,
                 borderRadius: 6, padding: '8px 10px',
                 display: 'flex', gap: 10, alignItems: 'flex-start',
                 opacity: 1 - gi * 0.06,
               }}>
-                <AppIcon app={group.app} size={28} />
+                <AppIcon app={group.app} rawTitle={group.rawTitle} size={28} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   {/* App name row */}
                   <div style={{
                     fontSize: 11, fontWeight: 500, color: '#e5e5e5',
                     letterSpacing: '-0.005em',
                     marginBottom: showSubRows ? 4 : 0,
-                    display: 'flex', justifyContent: 'space-between', gap: 8,
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
                   }}>
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {group.app}
                     </span>
-                    {/* Duration in header only when single entry with no sub-label */}
-                    {isSingle && !onlyEntry?.sub && (
-                      <span style={{
-                        fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: 10, fontVariantNumeric: 'tabular-nums', flexShrink: 0,
-                        color: onlyEntry.isFirst && onlyEntry.durationSec < 30 ? borderColor : '#737373',
-                      }}>
-                        {fmtDur(onlyEntry.durationSec, onlyEntry.isFirst)}
-                      </span>
-                    )}
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                      {/* Active indicator dot — most recent group only */}
+                      {isActive && (
+                        <span style={{
+                          width: 6, height: 6, borderRadius: '50%',
+                          background: '#4ade80',
+                          boxShadow: '0 0 5px 1px rgba(74,222,128,0.6)',
+                          display: 'inline-block', flexShrink: 0,
+                        }} />
+                      )}
+                      {/* Duration in header only when single entry with no sub-label */}
+                      {isSingle && !onlyEntry?.sub && (
+                        <span style={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: 10, fontVariantNumeric: 'tabular-nums',
+                          color: onlyEntry.isFirst && onlyEntry.durationSec < 30 ? catColor : '#737373',
+                        }}>
+                          {fmtDur(onlyEntry.durationSec, onlyEntry.isFirst)}
+                        </span>
+                      )}
+                    </span>
                   </div>
                   {/* Sub-rows */}
                   {showSubRows && (
@@ -281,7 +382,7 @@ export default function ActiveSession({ task, durationMin, sessionUpdate, onOpen
                           <span style={{
                             fontFamily: "'JetBrains Mono', monospace",
                             fontSize: 9.5, fontVariantNumeric: 'tabular-nums', flexShrink: 0,
-                            color: e.isFirst && e.durationSec < 30 ? borderColor : '#737373',
+                            color: e.isFirst && e.durationSec < 30 ? catColor : '#737373',
                           }}>
                             {fmtDur(e.durationSec, e.isFirst)}
                           </span>
