@@ -17,6 +17,7 @@ export default function TaskDeclaration({ onStart, onOpenSettings, accent }: Pro
   const [duration,        setDuration]       = useState<number>(30);
   const [hoveredDuration, setHoveredDuration] = useState<number | null>(null);
   const [isCustom,        setIsCustom]        = useState(false);
+  const [taskFocused,   setTaskFocused]   = useState(false);
   const [customFocused, setCustomFocused] = useState(false);
   const [customValue,   setCustomValue]   = useState('');
   const inputRef       = useRef<HTMLInputElement>(null);
@@ -102,7 +103,7 @@ export default function TaskDeclaration({ onStart, onOpenSettings, accent }: Pro
         style={{
           width: '100%',
           background: '#1a1a1a',
-          border: '0.5px solid rgba(255,255,255,0.08)',
+          border: `0.5px solid ${taskFocused ? `${accent}66` : 'rgba(255,255,255,0.08)'}`,
           borderRadius: 6,
           padding: '10px 12px',
           fontSize: 13,
@@ -114,9 +115,9 @@ export default function TaskDeclaration({ onStart, onOpenSettings, accent }: Pro
           transition: 'border-color 0.15s',
         }}
         onMouseEnter={(e) => { if (document.activeElement !== e.currentTarget) { e.currentTarget.style.background = '#222222'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)'; } }}
-        onMouseLeave={(e) => { if (document.activeElement !== e.currentTarget) { e.currentTarget.style.background = '#1a1a1a'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; } }}
-        onFocus={(e) => { e.currentTarget.style.background = '#1a1a1a'; e.currentTarget.style.borderColor = `${accent}66`; }}
-        onBlur={(e)  => { e.currentTarget.style.background = '#1a1a1a'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+        onMouseLeave={(e) => { if (document.activeElement !== e.currentTarget) { e.currentTarget.style.background = '#1a1a1a'; e.currentTarget.style.borderColor = taskFocused ? `${accent}66` : 'rgba(255,255,255,0.08)'; } }}
+        onFocus={() => setTaskFocused(true)}
+        onBlur={() => setTaskFocused(false)}
       />
 
       {/* Duration label */}
