@@ -70,16 +70,97 @@ function getFallbackChat(task: string): string {
   return "Got you. Let's shrink it to one step. What's the exact thing you're trying to finish right now?";
 }
 
+interface TrailAnalysis {
+  sequence: string;
+  driftPortal: string | null;
+  driftChain: string | null;
+  focusLoop: string | null;
+  recovery: string | null;
+}
+
+function analyzeTrail(switchLog: SessionStateForAI['switchLog']): TrailAnalysis {
+  // Collapse consecutive duplicate apps
+  const collapsed: SessionStateForAI['switchLog'] = [];
+  for (const entry of switchLog) {
+    if (!collapsed.length || collapsed[collapsed.length - 1].app !== entry.app) {
+      collapsed.push(entry);
+    }
+  }
+
+  const sequence = collapsed.length
+    ? collapsed.map(e => e.app).join(' → ')
+    : 'none';
+
+  // Drift portal: first focus/research → distraction transition
+  let driftPortal: string | null = null;
+  for (let i = 0; i < collapsed.length - 1; i++) {
+    if (
+      (collapsed[i].category === 'focus' || collapsed[i].category === 'research') &&
+      collapsed[i + 1].category === 'distraction'
+    ) {
+      driftPortal = `${collapsed[i].app} → ${collapsed[i + 1].app}`;
+      break;
+    }
+  }
+
+  // Drift chain: 2+ consecutive distraction apps
+  let driftChain: string | null = null;
+  let chainStart = -1;
+  for (let i = 0; i <= collapsed.length; i++) {
+    const isDistraction = i < collapsed.length && collapsed[i].category === 'distraction';
+    if (isDistraction) {
+      if (chainStart === -1) chainStart = i;
+    } else if (chainStart !== -1) {
+      if (i - chainStart >= 2) {
+        driftChain = collapsed.slice(chainStart, i).map(e => e.app).join(' → ');
+      }
+      chainStart = -1;
+    }
+  }
+
+  // Focus loop: focus → (research only) → focus productive cycle
+  let focusLoop: string | null = null;
+  for (let i = 0; i < collapsed.length - 2 && !focusLoop; i++) {
+    if (collapsed[i].category === 'focus') {
+      for (let j = i + 2; j <= Math.min(i + 3, collapsed.length - 1); j++) {
+        if (
+          collapsed[j].category === 'focus' &&
+          collapsed.slice(i + 1, j).every(e => e.category === 'research')
+        ) {
+          focusLoop = collapsed.slice(i, j + 1).map(e => e.app).join(' → ');
+          break;
+        }
+      }
+    }
+  }
+
+  // Recovery: last distraction → focus/research return
+  let recovery: string | null = null;
+  for (let i = collapsed.length - 2; i >= 0; i--) {
+    if (
+      collapsed[i].category === 'distraction' &&
+      (collapsed[i + 1].category === 'focus' || collapsed[i + 1].category === 'research')
+    ) {
+      recovery = `${collapsed[i].app} → ${collapsed[i + 1].app}`;
+      break;
+    }
+  }
+
+  return { sequence, driftPortal, driftChain, focusLoop, recovery };
+}
+
 function getFallbackInsight(session: SessionStateForAI): string {
   const totalSec = Math.max(1, session.focusSec + session.driftSec);
   const focusPct = Math.round((session.focusSec / totalSec) * 100);
+  const trail = analyzeTrail(session.switchLog);
+  const portalNote = trail.driftPortal ? ` the drift started at ${trail.driftPortal}.` : '';
   if (focusPct >= 80) {
-    return `Strong session: ${focusPct}% focused on "${session.task}". Keep this same start routine next time.`;
+    return `strong session — ${focusPct}% focused on "${session.task}".${portalNote} keep this same start routine next time.`;
   }
   if (focusPct >= 60) {
-    return `Solid effort: ${focusPct}% focus on "${session.task}". Reducing app switches early could lift the next session.`;
+    return `solid effort — ${focusPct}% focus on "${session.task}".${portalNote} catching that drift portal earlier next time could make a real difference.`;
   }
-  return `Challenging session at ${focusPct}% focus on "${session.task}". Try one tiny first step before opening extra tabs next time.`;
+  return `tough one at ${focusPct}% focus on "${session.task}".${trail.driftPortal ? ` watch that ${trail.driftPortal} doorway` : ' try closing distracting tabs before you start'} next session.`;
 }
 
 function getRecentApps(session: SessionStateForAI, limit = 5): string[] {
@@ -290,21 +371,22 @@ export async function geminiGenerateInsight(
   const fallback = getFallbackInsight(session);
   const totalSec = Math.max(1, session.focusSec + session.driftSec);
   const focusPct = Math.round((session.focusSec / totalSec) * 100);
-  const recentApps = getRecentApps(session, 8);
+  const trail = analyzeTrail(session.switchLog);
 
   const prompt = [
     AI_COPY.insightTone,
-    AI_COPY.insightFormat,
+    `Write a ghost trail insight in 2 short sentences. The first sentence must name the specific attention pattern you see in the trail (drift portal, drift chain, focus loop, or recovery). The second sentence gives one concrete suggestion for next time.`,
     `Task: "${session.task}"`,
     `Duration target: ${session.durationMin} min`,
-    `Focus seconds: ${session.focusSec}`,
-    `Drift seconds: ${session.driftSec}`,
-    `Switches: ${session.switchCount}`,
     `Focus rate: ${focusPct}%`,
-    `Recent apps: ${recentApps.join(", ") || "none"}`,
+    `Switches: ${session.switchCount}`,
+    `Attention trail: ${trail.sequence}`,
+    `Drift portal (focus→distraction gateway): ${trail.driftPortal ?? "none"}`,
+    `Drift chain (consecutive distractions): ${trail.driftChain ?? "none"}`,
+    `Focus loop (productive cycle): ${trail.focusLoop ?? "none"}`,
+    `Recovery moment (distraction→focus return): ${trail.recovery ?? "none"}`,
     `Historical patterns from Backboard: "${formatContext(backboardContext)}"`,
-    AI_COPY.insightConstraint,
-    AI_COPY.insightReturn,
+    `Write in lowercase, casual tone. Name the specific apps from the trail. No preamble, no labels. Return only the insight text.`,
   ].join("\n");
 
   const text = await generateText(prompt);
