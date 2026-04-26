@@ -167,14 +167,15 @@ function deriveGhostState(category: WindowCategory, driftSec: number): GhostMasc
 
 // ── Nudge helpers ─────────────────────────────────────────────────────────────
 
+// Demo: cooldowns are short so all nudge types can be triggered back-to-back.
+// Raise to 3/5/5/10/10/10 min for production.
 const NUDGE_COOLDOWNS: Record<string, number> = {
-  // demo: short cooldowns for testability — restore to 3/5/5/10/10/10 min for production
-  'in-app':                30 * 1000,
-  'distraction-firm':      60 * 1000,
-  'distraction-hard':      60 * 1000,
-  'stuck-helpful':         90 * 1000,
-  'idle-soft':             90 * 1000,
-  'pattern-observational': 90 * 1000,
+  'in-app':                10 * 1000,
+  'distraction-firm':      15 * 1000,
+  'distraction-hard':      15 * 1000,
+  'stuck-helpful':         20 * 1000,
+  'idle-soft':             20 * 1000,
+  'pattern-observational': 20 * 1000,
   'milestone-positive':    Infinity,
 };
 
@@ -199,12 +200,16 @@ function sessionContext() {
   return { task: session.task, investedSec, remainingSec };
 }
 
-async function fireNudge(payload: NudgePayload): Promise<boolean> {
+async function fireNudge(payload: NudgePayload, force = false): Promise<boolean> {
   if (!session) return false;
   const isInterrupt = payload.driftType === 'distraction' || payload.driftType === 'stuck';
   if (!isInterrupt && !mainWindow) return false;
-  // Don't overwrite a nudge that's currently visible — user hasn't dismissed it yet
-  if (isInterrupt && isNudgeWindowOpen()) return false;
+  // Idle-soft can force-replace whatever is currently showing.
+  // All other nudges wait for the user to dismiss first.
+  if (isInterrupt && isNudgeWindowOpen()) {
+    if (force) closeNudgeWindow();
+    else return false;
+  }
   const now = Date.now();
   const cooldownExpiry = session.nudgeCooldownUntil[payload.type];
   if (cooldownExpiry !== undefined && now < cooldownExpiry) return false;
@@ -248,9 +253,9 @@ async function checkDistractionDrift(appName: string, category: WindowCategory, 
   }
 
   const consecutiveSec = (now - session.distractionStartTime) / 1000;
-  if (consecutiveSec < 90) return; // demo: 1m30s — raise to 180+ for production
+  if (consecutiveSec < 15) return; // demo: 15s — raise to 180+ for production
 
-  const windowStart = now - 10 * 60 * 1000;
+  const windowStart = now - 2 * 60 * 1000; // demo: 2min window — raise to 10min for production
   const history = session.distractionHistory[appName] ?? [];
   const recentOccurrences = history.filter(t => t >= windowStart).length;
 
@@ -280,9 +285,13 @@ async function checkDistractionDrift(appName: string, category: WindowCategory, 
 
 async function checkStuckDrift(now: number) {
   if (!session) return;
-  const windowStart = now - 5 * 60 * 1000;
+  const windowStart = now - 60 * 1000; // demo: 1min window — raise to 5min for production
   const recent = session.switchLog.filter(s => s.timestamp >= windowStart);
-  if (recent.length < 10) return;
+  if (recent.length < 4) return; // demo: 4 switches — raise to 10 for production
+
+  // Only fire if the user is actively cycling right now — not replaying old switches
+  const mostRecentSwitch = recent[recent.length - 1]?.timestamp ?? 0;
+  if (now - mostRecentSwitch > 20 * 1000) return;
 
   const distractionCount = recent.filter(s => s.category === 'distraction').length;
   if (distractionCount / recent.length > 0.2) return;
@@ -316,7 +325,7 @@ async function checkInactivity(_now: number) {
       tier: 2,
       message: `still there? no activity for ${Math.round(idleSec / 60)} minutes.`,
       driftType: 'distraction',
-    });
+    }, true /* force — idle overrides any existing popup */);
   }
 }
 
@@ -324,7 +333,7 @@ async function checkMilestone(now: number) {
   if (!session) return;
   if (session.milestonesFired.has('25min')) return;
   if (session.lastCategory !== 'focus') return;
-  if (now - session.lastSwitchTime >= 25 * 60 * 1000) {
+  if (now - session.lastSwitchTime >= 30 * 1000) { // demo: 30s — raise to 25min for production
     session.milestonesFired.add('25min');
     await fireNudge({
       type: 'milestone-positive',
