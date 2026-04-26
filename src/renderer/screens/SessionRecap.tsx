@@ -1,10 +1,13 @@
 import React from 'react';
 import GhostMascot from '../components/GhostMascot';
+import { GearIcon } from './Settings';
 import type { SessionRecapPayload, WindowCategory } from '../../shared/ipc-contract';
 
 interface Props {
   recap: SessionRecapPayload;
   onNewSession: () => void;
+  onOpenSettings: () => void;
+  accent: string;
 }
 
 function fmtDuration(sec: number): string {
@@ -22,7 +25,7 @@ const CATEGORY_DOT: Record<WindowCategory, string> = {
   unknown:     '#737373',
 };
 
-export default function SessionRecap({ recap, onNewSession }: Props) {
+export default function SessionRecap({ recap, onNewSession, onOpenSettings, accent }: Props) {
   const maxSec = Math.max(1, ...recap.appBreakdown.map((a) => a.seconds));
 
   const metrics = [
@@ -36,7 +39,7 @@ export default function SessionRecap({ recap, onNewSession }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontFamily: "'Inter', sans-serif", color: '#e5e5e5', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ padding: '16px 16px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <GhostMascot state="happy" size={32} />
+        <GhostMascot state="happy" size={32} tint={accent} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 9, color: '#737373', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>
             session complete
@@ -45,9 +48,20 @@ export default function SessionRecap({ recap, onNewSession }: Props) {
             {recap.task}
           </div>
         </div>
-        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: '#2dd4bf', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: accent, fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
           {fmtDuration(recap.durationMin * 60)}
         </div>
+        {/* Settings button */}
+        <button
+          onClick={onOpenSettings}
+          title="settings"
+          style={{ background: 'transparent', border: 'none', padding: '0 0 0 6px', cursor: 'pointer', color: '#525252', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#a3a3a3')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#525252')}
+          aria-label="settings"
+        >
+          <GearIcon size={13} />
+        </button>
       </div>
 
       {/* Scrollable body */}
@@ -98,7 +112,7 @@ export default function SessionRecap({ recap, onNewSession }: Props) {
         {/* Ghost insight */}
         <div style={{ background: '#1a1a1a', border: '0.5px solid rgba(255,255,255,0.06)', borderRadius: 6, padding: '10px 12px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
           <div style={{ flexShrink: 0, marginTop: -2 }}>
-            <GhostMascot state="calm" size={22} />
+            <GhostMascot state="calm" size={22} tint={accent} />
           </div>
           <div>
             <div style={{ fontSize: 9, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4, fontWeight: 500 }}>
@@ -117,8 +131,8 @@ export default function SessionRecap({ recap, onNewSession }: Props) {
           onClick={onNewSession}
           style={{
             width: '100%',
-            background: '#2dd4bf',
-            border: '0.5px solid #2dd4bf',
+            background: accent,
+            border: `0.5px solid ${accent}`,
             borderRadius: 5,
             padding: '9px 0',
             fontSize: 11,
