@@ -528,13 +528,17 @@ function endSession() {
 
   void (async () => {
     const recap = buildRecap(endedSession);
+
+    // Transition immediately with the static insight so the UI doesn't feel frozen
+    mainWindow?.webContents.send(IPC.SESSION_RECAP, recap);
+
+    // Fetch AI insight in the background, then push an update so the insight refreshes in place
     recap.insight = await generateInsight(endedSession);
 
     const history = ((store.get('sessionHistory') as SessionRecapPayload[] | undefined) ?? []);
     store.set('sessionHistory', [...history, recap].slice(-50));
     store.delete('currentSession');
     void recordSessionMemory(recap);
-
 
     mainWindow?.webContents.send(IPC.SESSION_RECAP, recap);
   })();
