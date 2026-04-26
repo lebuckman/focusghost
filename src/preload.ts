@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   collapseWindow:     ()                           => ipcRenderer.send('WINDOW_COLLAPSE'),
   expandWindow:       ()                           => ipcRenderer.send('WINDOW_EXPAND'),
   getSettings:        ()                           => ipcRenderer.invoke(IPC.GET_SETTINGS),
+  requestGhostChat:   ()                           => ipcRenderer.invoke(IPC.REQUEST_GHOST_CHAT),
   setWindowDim:       (d: boolean)                 => ipcRenderer.invoke(IPC.SET_WINDOW_DIM, d),
   platform:           process.platform,
 });

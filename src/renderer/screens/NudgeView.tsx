@@ -23,7 +23,7 @@ export default function NudgeView() {
   }, []);
 
   const dismiss    = () => window.electronAPI.dismissNudge();
-  const stuck      = () => window.electronAPI.dismissNudge();
+  const stuck      = () => { window.electronAPI.dismissNudge(); window.electronAPI.requestGhostChat(); };
   const endSession = () => { window.electronAPI.dismissNudge(); window.electronAPI.endSession(); };
 
   return (

@@ -2,7 +2,7 @@ import "dotenv/config";
 
 import { app, BrowserWindow, ipcMain, powerMonitor, Menu } from 'electron';
 import { extractTabTitle } from './main/get-browser-tab';
-import { showInterruptNudge, closeNudgeWindow, isNudgeWindowOpen } from './main/nudge-window';
+import { showInterruptNudge, closeNudgeWindow, isNudgeWindowOpen, isNudgeWindowSender } from './main/nudge-window';
 import path from 'path';
 import started from 'electron-squirrel-startup';
 import Store from 'electron-store';
@@ -21,8 +21,6 @@ import {
   type GhostMascotState,
   type NudgePayload,
   type NudgeType,
-  type GhostMessagePayload,
-  type OpenGhostChatPayload,
 } from './shared/ipc-contract';
 import {
   initializeAIOrchestrator,
@@ -139,10 +137,15 @@ interface SessionState {
   distractionHistory: Record<string, number[]>;
   nudgeCooldownUntil: Partial<Record<string, number>>;
   milestonesFired: Set<string>;
+  stuckRollingLog: SwitchEntry[];   // cleared after stuck fires; separate from switchLog
+  idleSoftFired: boolean;           // true after idle-soft fires; reset when user is active
+  focusStreakStart: number | null;  // timestamp when current focus streak began
 }
 
 let session: SessionState | null = null;
 let settings: AppSettings = { ...DEFAULT_SETTINGS, ...(store.get('settings') as Partial<AppSettings> | undefined) };
+// Always apply the demo inactivity threshold regardless of what's cached in the store
+settings.inactivityThreshold = DEFAULT_SETTINGS.inactivityThreshold;
 let mainWindow: BrowserWindow | null = null;
 let titleSettleTimer: ReturnType<typeof setTimeout> | null = null;
 let preCheckinHeight = 620;
@@ -179,6 +182,16 @@ const NUDGE_COOLDOWNS: Record<string, number> = {
   'milestone-positive':    Infinity,
 };
 
+// DEMO THRESHOLDS — revert to production values after demo
+const DISTRACTION_FIRM_SEC  = 8;    // prod: 120
+const PATTERN_VISIT_COUNT   = 1;    // prod: 2  (fire pattern on 2nd visit)
+const PATTERN_WINDOW_SEC    = 90;   // prod: 600
+const STUCK_SWITCH_COUNT    = 3;    // prod: 6
+const STUCK_WINDOW_SEC      = 45;   // prod: 300
+const STUCK_RECENCY_SEC     = 15;   // prod: 30
+const IDLE_TRIGGER_SEC      = 10;   // same for prod
+const MILESTONE_STREAK_SEC  = 20;   // prod: 25 * 60
+
 function showCheckinNudge(win: BrowserWindow | null, payload: NudgePayload): void {
   if (!win || win.isDestroyed()) return;
   preCheckinHeight = win.getBounds().height;
@@ -202,14 +215,12 @@ function sessionContext() {
 
 async function fireNudge(payload: NudgePayload, force = false): Promise<boolean> {
   if (!session) return false;
-  const isInterrupt = payload.driftType === 'distraction' || payload.driftType === 'stuck';
+  const isInterrupt = payload.tier === 2;
   if (!isInterrupt && !mainWindow) return false;
-  // Idle-soft can force-replace whatever is currently showing.
-  // All other nudges wait for the user to dismiss first.
-  if (isInterrupt && isNudgeWindowOpen()) {
-    if (force) closeNudgeWindow();
-    else return false;
-  }
+  // Non-force interrupts are blocked if a popup is already visible.
+  // idle-soft (force=true) closes and replaces whatever is showing.
+  if (isInterrupt && !force && isNudgeWindowOpen()) return false;
+
   const now = Date.now();
   const cooldownExpiry = session.nudgeCooldownUntil[payload.type];
   if (cooldownExpiry !== undefined && now < cooldownExpiry) return false;
@@ -223,7 +234,8 @@ async function fireNudge(payload: NudgePayload, force = false): Promise<boolean>
   session.nudgeLog.push({ message: finalPayload.message, driftType: payload.driftType, timestamp: now });
 
   if (isInterrupt) {
-    showInterruptNudge(finalPayload);
+    // Pass force so showInterruptNudge can close an existing popup for idle-soft
+    showInterruptNudge(finalPayload, force);
   } else {
     showCheckinNudge(mainWindow, finalPayload);
   }
@@ -253,22 +265,21 @@ async function checkDistractionDrift(appName: string, category: WindowCategory, 
   }
 
   const consecutiveSec = (now - session.distractionStartTime) / 1000;
-  if (consecutiveSec < 15) return; // demo: 15s — raise to 180+ for production
+  if (consecutiveSec < DISTRACTION_FIRM_SEC) return;
 
-  const windowStart = now - 2 * 60 * 1000; // demo: 2min window — raise to 10min for production
+  const windowStart = now - PATTERN_WINDOW_SEC * 1000;
   const history = session.distractionHistory[appName] ?? [];
   const recentOccurrences = history.filter(t => t >= windowStart).length;
 
-  // Record this occurrence (pruning old entries first) and reset timer so it only fires once per 60s-stretch
+  // Record occurrence and reset timer — prevents re-fire until DISTRACTION_FIRM_SEC elapses again
   session.distractionHistory[appName] = [...history.filter(t => t >= windowStart), now];
   session.distractionStartTime = now;
 
-  if (recentOccurrences >= 2) {
-    // 3rd+ time (0-indexed: 2 prior + this one = 3rd)
+  if (recentOccurrences >= PATTERN_VISIT_COUNT) {
     await fireNudge({
-      type: 'distraction-firm',
+      type: 'pattern-observational',
       tier: 2,
-      message: `third time on ${appName} in 10 minutes. your task is still waiting.`,
+      message: `${appName.toLowerCase()} again — want me to block it for the rest of the session?`,
       driftType: 'distraction',
       context: { appName, driftDurationSec: Math.round(consecutiveSec), occurrences: recentOccurrences + 1, ...sessionContext() },
     });
@@ -276,55 +287,62 @@ async function checkDistractionDrift(appName: string, category: WindowCategory, 
     await fireNudge({
       type: 'distraction-firm',
       tier: 2,
-      message: `you've been on ${appName} for a bit. still working on "${session.task}"?`,
+      message: `you've been on ${appName.toLowerCase()} for ${Math.round(consecutiveSec)}s. "${session.task}" is still waiting.`,
       driftType: 'distraction',
-      context: { appName, driftDurationSec: Math.round(consecutiveSec), occurrences: recentOccurrences + 1, ...sessionContext() },
+      context: { appName, driftDurationSec: Math.round(consecutiveSec), occurrences: 1, ...sessionContext() },
     });
   }
 }
 
 async function checkStuckDrift(now: number) {
   if (!session) return;
-  const windowStart = now - 60 * 1000; // demo: 1min window — raise to 5min for production
-  const recent = session.switchLog.filter(s => s.timestamp >= windowStart);
-  if (recent.length < 4) return; // demo: 4 switches — raise to 10 for production
 
-  // Only fire if the user is actively cycling right now — not replaying old switches
-  const mostRecentSwitch = recent[recent.length - 1]?.timestamp ?? 0;
-  if (now - mostRecentSwitch > 20 * 1000) return;
+  // Prune entries older than the rolling window
+  session.stuckRollingLog = session.stuckRollingLog.filter(
+    s => s.timestamp >= now - STUCK_WINDOW_SEC * 1000,
+  );
 
-  const distractionCount = recent.filter(s => s.category === 'distraction').length;
-  if (distractionCount / recent.length > 0.2) return;
+  if (session.stuckRollingLog.length < STUCK_SWITCH_COUNT) return;
+
+  // Most recent switch must be recent — user is actively cycling right now
+  const mostRecent = session.stuckRollingLog[session.stuckRollingLog.length - 1];
+  if (now - mostRecent.timestamp > STUCK_RECENCY_SEC * 1000) return;
+
+  // Fewer than 20% distraction switches — this is a focus/stuck pattern, not distraction drift
+  const distractionCount = session.stuckRollingLog.filter(s => s.category === 'distraction').length;
+  if (distractionCount / session.stuckRollingLog.length >= 0.2) return;
 
   const fired = await fireNudge({
     type: 'stuck-helpful',
     tier: 2,
-    message: `you've been cycling apps a lot — what's snagging you?`,
+    message: `you've been cycling apps — what's snagging you?`,
     driftType: 'stuck',
+    context: { ...sessionContext() },
   });
 
-  // Only open ghost chat once per cooldown — not on every 2s tick
-  if (fired) {
-    mainWindow?.webContents.send(IPC.OPEN_GHOST_CHAT, { trigger: 'stuck' } as OpenGhostChatPayload);
-    const ghostMsg: GhostMessagePayload = {
-      message: `noticed you've been cycling between apps — what's blocking you on "${session.task}"?`,
-      trigger: 'stuck_drift',
-      timestamp: now,
-    };
-    mainWindow?.webContents.send(IPC.GHOST_MESSAGE, ghostMsg);
-    session.chatHistory.push({ role: 'ghost', content: ghostMsg.message, timestamp: now });
-  }
+  // Clear the log after firing so stuck can't re-fire on the same switch burst
+  if (fired) session.stuckRollingLog = [];
 }
 
 async function checkInactivity(_now: number) {
   if (!session) return;
   const idleSec = powerMonitor.getSystemIdleTime();
-  if (idleSec >= settings.inactivityThreshold) {
+
+  // Reset flag as soon as the user is active again
+  if (idleSec < 5) {
+    session.idleSoftFired = false;
+    return;
+  }
+
+  // Fire once per idle stretch; force-replaces any existing popup
+  if (idleSec >= IDLE_TRIGGER_SEC && !session.idleSoftFired) {
+    session.idleSoftFired = true;
     await fireNudge({
       type: 'idle-soft',
       tier: 2,
-      message: `still there? no activity for ${Math.round(idleSec / 60)} minutes.`,
+      message: `still there? you've been away for ${Math.round(idleSec)}s.`,
       driftType: 'distraction',
+      context: { ...sessionContext() },
     }, true /* force — idle overrides any existing popup */);
   }
 }
@@ -332,14 +350,27 @@ async function checkInactivity(_now: number) {
 async function checkMilestone(now: number) {
   if (!session) return;
   if (session.milestonesFired.has('25min')) return;
-  if (session.lastCategory !== 'focus') return;
-  if (now - session.lastSwitchTime >= 30 * 1000) { // demo: 30s — raise to 25min for production
+
+  if (session.lastCategory !== 'focus') {
+    // Reset streak whenever the user leaves a focus app
+    session.focusStreakStart = null;
+    return;
+  }
+
+  // Start the streak timer on first focus tick
+  if (session.focusStreakStart === null) {
+    session.focusStreakStart = now;
+    return;
+  }
+
+  if (now - session.focusStreakStart >= MILESTONE_STREAK_SEC * 1000) {
     session.milestonesFired.add('25min');
     await fireNudge({
       type: 'milestone-positive',
       tier: 2,
-      message: `25 minutes of deep focus — that's your best streak. keep it going.`,
+      message: `${MILESTONE_STREAK_SEC}s of continuous focus — solid work. keep it going.`,
       driftType: 'frequency',
+      context: { ...sessionContext() },
     });
   }
 }
@@ -404,6 +435,7 @@ async function pollActiveWindow() {
       // Cancel any pending title-settle for the previous app
       if (titleSettleTimer) { clearTimeout(titleSettleTimer); titleSettleTimer = null; }
       session.switchLog.push({ app: appName, category, timestamp: now, title });
+      session.stuckRollingLog.push({ app: appName, category, timestamp: now });
       session.switchCount += 1;
       session.lastApp = appName;
       session.lastCategory = category;
@@ -421,6 +453,7 @@ async function pollActiveWindow() {
         if (!session) return;
         const t = Date.now();
         session.switchLog.push({ app: capturedApp, category: capturedCategory, timestamp: t, title: capturedTitle });
+        session.stuckRollingLog.push({ app: capturedApp, category: capturedCategory, timestamp: t });
         session.switchCount += 1;
         session.lastAppChangeTime = t;
         session.lastSwitchTime = t;
@@ -584,6 +617,9 @@ function registerIPC() {
       distractionHistory: {},
       nudgeCooldownUntil: {},
       milestonesFired: new Set(),
+      stuckRollingLog: [],
+      idleSoftFired: false,
+      focusStreakStart: null,
     };
     store.set('currentSession', {
       task: session.task,
@@ -636,8 +672,8 @@ function registerIPC() {
     },
   );
 
-  ipcMain.handle(IPC.DISMISS_NUDGE, () => {
-    if (isNudgeWindowOpen()) {
+  ipcMain.handle(IPC.DISMISS_NUDGE, (event) => {
+    if (isNudgeWindowSender(event.sender)) {
       closeNudgeWindow();
     } else {
       restoreMainWindow(mainWindow);
@@ -653,6 +689,10 @@ function registerIPC() {
   });
 
   ipcMain.handle(IPC.GET_SETTINGS, () => ({ ...settings }));
+
+  ipcMain.handle(IPC.REQUEST_GHOST_CHAT, () => {
+    mainWindow?.webContents.send(IPC.OPEN_GHOST_CHAT, { trigger: 'stuck' });
+  });
 
   ipcMain.handle(IPC.SET_WINDOW_DIM, (_e, dimmed: boolean) => {
     mainWindow?.setOpacity(dimmed ? 0.8 : 1.0);

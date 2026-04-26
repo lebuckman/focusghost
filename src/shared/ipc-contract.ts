@@ -18,8 +18,9 @@ export const IPC = {
   SESSION_RECAP:   'SESSION_RECAP',
   DEBUG_NUDGE:     'DEBUG_NUDGE',
   NUDGE_DISMISSED: 'NUDGE_DISMISSED',
-  GET_SETTINGS:    'GET_SETTINGS',
-  SET_WINDOW_DIM:  'SET_WINDOW_DIM',
+  GET_SETTINGS:      'GET_SETTINGS',
+  SET_WINDOW_DIM:    'SET_WINDOW_DIM',
+  REQUEST_GHOST_CHAT: 'REQUEST_GHOST_CHAT',
 } as const;
 
 export type IPCChannel = (typeof IPC)[keyof typeof IPC];
@@ -127,7 +128,7 @@ export interface AppStore {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   driftThreshold: 7,
-  inactivityThreshold: 90, // demo: 1m30s — raise to 300 (5min) for production
+  inactivityThreshold: 10, // demo: 10s — raise to 300 (5min) for production
   nudgeEnabled: true,
   voiceEnabled: false,
   accentColor: 'teal',
