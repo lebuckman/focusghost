@@ -52,9 +52,10 @@ export async function generateChatResponse(
   session: SessionStateForAI,
   userMessage: string,
   history: ChatEntry[],
+  deviceId: string,
 ): Promise<string> {
   const backboardContext = await getSafeBackboardContext(session);
-  return geminiGenerateChat(session, userMessage, history, backboardContext);
+  return geminiGenerateChat(session, userMessage, history, backboardContext, deviceId);
 }
 
 export async function generateInsight(
@@ -66,9 +67,13 @@ export async function generateInsight(
 
 export async function recordSessionMemory(
   recap: SessionRecapPayload,
+  chatHistory?: ChatEntry[],
 ): Promise<void> {
   try {
-    await saveSessionMemory(DEFAULT_DEVICE_ID, recap);
+    const chatMemories = chatHistory?.map(
+      (entry) => `${entry.role === 'user' ? 'User' : 'Ghost'} said: "${entry.content}"`
+    );
+    await saveSessionMemory(DEFAULT_DEVICE_ID, recap, chatMemories);
   } catch (error) {
     console.error("[AIOrchestrator] Error recording session memory:", error);
   }

@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { saveChatMemory } from './backboardService';
 import type {
   ChatEntry,
   DriftType,
@@ -210,6 +211,7 @@ export async function geminiGenerateChat(
   userMessage: string,
   history: ChatEntry[],
   backboardContext: string,
+  deviceId: string,
 ): Promise<string> {
   const fallback = getFallbackChat(session.task);
   const current = getCurrentContext(session);
@@ -268,6 +270,16 @@ export async function geminiGenerateChat(
   ].join("\n");
 
   const text = await generateText(prompt);
+
+  if (text) {
+    await saveChatMemory(deviceId, {
+      userMessage: userMessage,
+      ghostResponse: text,
+      sessionTask: session.task,
+      timestamp: Date.now(),
+    });
+  }
+
   return text || fallback;
 }
 
