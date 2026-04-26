@@ -223,13 +223,25 @@ export default function SessionRecap({ recap, onNewSession, onOpenSettings, acce
     { label: 'nudges',     value: recap.nudgesReceived,       color: '#facc15' },
   ] as const;
 
-  // Build trail nodes from appBreakdown (up to 5 apps)
-  const rawNodes = recap.appBreakdown.slice(0, 5);
+  // Derive trail nodes from chronological switchLog using the same
+  // collapse logic as analyzeTrail in geminiService.ts so visual tags
+  // match what the AI insight describes.
+  const collapsed: typeof recap.switchLog = [];
+  for (const entry of recap.switchLog) {
+    if (!collapsed.length || collapsed[collapsed.length - 1].app !== entry.app) {
+      collapsed.push(entry);
+    }
+  }
+  const rawNodes = collapsed.slice(0, 5);
   const trailNodes: TrailNode[] = rawNodes.map((a, i) => {
     let tag: string | null = null;
-    if (i === 0) tag = 'start';
-    else if (i === rawNodes.length - 1) tag = 'recovery';
-    else if (a.category === 'distraction') {
+    const isLast = i === rawNodes.length - 1;
+    const prevWasDistraction = i > 0 && rawNodes[i - 1].category === 'distraction';
+    if (i === 0) {
+      tag = 'start';
+    } else if (isLast && a.category !== 'distraction' && prevWasDistraction) {
+      tag = 'recovery';
+    } else if (a.category === 'distraction') {
       const prevDistraction = rawNodes.slice(0, i).some(n => n.category === 'distraction');
       tag = prevDistraction ? 'drift chain' : 'drift portal';
     }
