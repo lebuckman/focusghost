@@ -32,6 +32,8 @@ const AI_COPY = {
     "Return only the message text. No extra labels, no markdown, no emojis.",
   insightConstraint: "Include one concrete suggestion for the next session.",
   insightReturn: "Return only the insight text.",
+  cutesyness: "Use cutesy, playful, friendly language. Be warm and encouraging.",
+  lowercaseOnly: "IMPORTANT: Use ONLY lowercase letters in your entire response. No capital letters anywhere, not even for proper nouns or sentence starts.",
 } as const;
 
 export interface SessionStateForAI {
@@ -106,6 +108,7 @@ function normalizeOutput(text: string): string {
     .replace(/^"+|"+$/g, "")
     .replace(/^'+|'+$/g, "")
     .replace(/\s+/g, " ")
+    .toLowerCase() // Convert to lowercase
     .trim();
 
   if (!cleaned) return "";
@@ -204,6 +207,8 @@ export async function geminiGenerateNudge(
     AI_COPY.nudgeFormat,
     AI_COPY.nudgeConstraint,
     AI_COPY.noLecture,
+    AI_COPY.cutesyness,
+    AI_COPY.lowercaseOnly,
   ].join("\n");
 
   const text = await generateText(prompt);
@@ -266,13 +271,15 @@ export async function geminiGenerateChat(
     "Good: add all the numbers, then divide by how many numbers there are. start by getting the total first.",
     "Off-track question example:",
     "User: what's the best fast food place?",
-    "Good: Taco Bell is solid if you want cheap and quick. tiny redirect though, let's finish this focus step first.",
+    "Good: taco bell is solid if you want cheap and quick. tiny redirect though, let's finish this focus step first.",
     "Stuck example:",
     "User: I'm stuck on my speech title.",
     "Good: got you. give me the topic and whether you're trying to persuade or inform, and i'll help make a few title options.",
     "Clear next step example:",
     "User: I have to add everyone up.",
     "Good: yep, that's the right move. add them carefully, then count how many people are in the list.",
+    AI_COPY.cutesyness,
+    AI_COPY.lowercaseOnly,
   ].join("\n");
 
   const text = await generateText(prompt);
@@ -313,6 +320,8 @@ export async function geminiGenerateInsight(
     `Use positive language.`,
     AI_COPY.insightConstraint,
     AI_COPY.insightReturn,
+    AI_COPY.cutesyness,
+    AI_COPY.lowercaseOnly,
   ].join("\n");
 
   const model = getModel();
