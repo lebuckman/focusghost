@@ -16,6 +16,10 @@ declare global {
       onSessionRecap:     (cb: (data: unknown) => void) => void;
       onNudgeDismissed:   (cb: () => void) => void;
       removeAllListeners: (channel: string) => void;
+      closeWindow:        () => void;
+      minimizeWindow:     () => void;
+      collapseWindow:     () => void;
+      expandWindow:       () => void;
     };
   }
 }

@@ -16,4 +16,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onNudgeDismissed:   (cb: () => void)            => ipcRenderer.on(IPC.NUDGE_DISMISSED, () => cb()),
   debugNudge:         (type: string)               => ipcRenderer.invoke(IPC.DEBUG_NUDGE, type),
   removeAllListeners: (channel: string)           => ipcRenderer.removeAllListeners(channel),
+  closeWindow:        ()                           => ipcRenderer.send('WINDOW_CLOSE'),
+  minimizeWindow:     ()                           => ipcRenderer.send('WINDOW_MINIMIZE'),
+  collapseWindow:     ()                           => ipcRenderer.send('WINDOW_COLLAPSE'),
+  expandWindow:       ()                           => ipcRenderer.send('WINDOW_EXPAND'),
 });

@@ -10,6 +10,28 @@ import { MOCK_SESSION_UPDATE, IPC } from '../shared/ipc-contract';
 
 const isNudgeView = new URLSearchParams(window.location.search).get('view') === 'nudge';
 
+// ─── Custom frameless title bar ───────────────────────────────────────────────
+
+function TitleBar() {
+  return (
+    <div style={{
+      height: 30, background: '#111111', flexShrink: 0,
+      display: 'flex', alignItems: 'center',
+      paddingLeft: 65, paddingRight: 20,
+    }}>
+      <span style={{
+        fontSize: 10, color: '#737373', fontWeight: 500,
+        letterSpacing: '0.04em', margin: '0 auto',
+      }}>
+        focusghost
+      </span>
+      <span style={{ fontSize: 9, color: '#525252', letterSpacing: '0.04em', flexShrink: 0 }}>
+        ◉ pinned
+      </span>
+    </div>
+  );
+}
+
 type Screen = 'declare' | 'session' | 'chat' | 'recap';
 
 export default function App() {
@@ -69,7 +91,9 @@ export default function App() {
   if (isNudgeView) return <NudgeView />;
 
   return (
-    <div style={{ width: '100%', height: '100vh', overflow: 'hidden', background: '#111111', fontFamily: "'Inter', sans-serif", position: 'relative' }}>
+    <div style={{ width: '100%', height: '100vh', overflow: 'hidden', background: '#111111', fontFamily: "'Inter', sans-serif", display: 'flex', flexDirection: 'column' }}>
+      <TitleBar />
+      <div style={{ flex: 1, minHeight: 0, position: 'relative', background: '#111111', overflow: 'hidden' }}>
       {screen === 'declare' && (
         <TaskDeclaration
           onStart={(task, durationMin) => {
@@ -113,6 +137,7 @@ export default function App() {
           onEndSession={() => { dismissNudge(); window.electronAPI.endSession(); }}
         />
       )}
+      </div>
     </div>
   );
 }
