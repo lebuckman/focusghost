@@ -286,13 +286,8 @@ async function fireNudge(payload: NudgePayload): Promise<boolean> {
   const cooldownExpiry = session.nudgeCooldownUntil[payload.type];
   if (cooldownExpiry !== undefined && now < cooldownExpiry) return false;
 
-<<<<<<< HEAD
-  session.nudgeCooldownUntil[payload.type] =
-    now + (NUDGE_COOLDOWNS[payload.type] ?? 5 * 60 * 1000);
-=======
   const sensitivityMult = settings.nudgeSensitivity === 'gentle' ? 2 : settings.nudgeSensitivity === 'strict' ? 0.5 : 1;
   session.nudgeCooldownUntil[payload.type] = now + (NUDGE_COOLDOWNS[payload.type] ?? 5 * 60 * 1000) * sensitivityMult;
->>>>>>> 5569e70 (feat: settings polish and auto-dim)
 
   const aiMessage = await generateNudgeMessage(session, payload.driftType);
   const finalPayload: NudgePayload = { ...payload, message: aiMessage };
