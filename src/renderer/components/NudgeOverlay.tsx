@@ -8,10 +8,9 @@ interface Props {
 }
 
 export default function NudgeOverlay({ nudge, onDismiss, onOpenChat }: Props) {
-  const borderColor = nudge?.urgent
-    ? 'rgba(250,204,21,0.4)'
-    : 'rgba(45,212,191,0.4)';
-  const accentColor = nudge?.urgent ? '#facc15' : '#2dd4bf';
+  const isAmber = nudge?.driftType !== 'stuck';
+  const borderColor = isAmber ? 'rgba(250,204,21,0.4)' : 'rgba(45,212,191,0.4)';
+  const accentColor = isAmber ? '#facc15' : '#2dd4bf';
 
   return (
     <div
