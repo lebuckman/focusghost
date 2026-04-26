@@ -48,7 +48,7 @@
     "@fontsource/inter": "^5.2.8",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@google/generative-ai": "^0.24.1",
-    "active-win": "^7.7.2",
+    "active-win": "^8.2.1",
     "backboard-sdk": "^1.5.12",
     "dotenv": "^17.4.2",
     "electron-squirrel-startup": "^1.0.1",
