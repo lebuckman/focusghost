@@ -1,5 +1,8 @@
 import "dotenv/config";
 
+import Store from 'electron-store';
+import { randomUUID } from 'crypto';
+
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
 import started from "electron-squirrel-startup";
@@ -24,6 +27,14 @@ import {
 } from "./main/ai/aiOrchestrator.js";
 
 if (started) app.quit();
+
+
+const store = new Store();
+const deviceId = (store.get('deviceId') as string) ?? (() => {
+  const id = randomUUID();
+  store.set('deviceId', id);
+  return id;
+})();
 
 // ── App categorizer ──────────────────────────────────────────────────────────
 
@@ -216,7 +227,7 @@ function endSession() {
   void (async () => {
     const recap = buildRecap(endedSession);
     recap.insight = await generateInsight(endedSession);
-    void recordSessionMemory(recap);
+    void recordSessionMemory(recap, endedSession.chatHistory);
     mainWindow?.webContents.send(IPC.SESSION_RECAP, recap);
   })();
 }
@@ -273,6 +284,7 @@ function registerIPC() {
         activeSession,
         payload.message,
         historyForModel,
+        deviceId,
       );
       const ghostEntry: ChatEntry = {
         role: "ghost",

@@ -29,6 +29,16 @@ export interface DriftEvent {
 }
 
 /**
+ * Represents a chat exchange to be saved to memory.
+ */
+export interface ChatMemoryEvent {
+  userMessage: string;
+  ghostResponse: string;
+  sessionTask: string;
+  timestamp: number;
+}
+
+/**
  * Backboard service — wraps all Backboard SDK calls.
  * Initialize once on app startup with the API key from .env.
  */
@@ -128,7 +138,7 @@ class BackboardService {
    * @param deviceId - Unique device identifier
    * @param recap - Session recap data to persist
    */
-  async saveSessionMemory(deviceId: string, recap: SessionRecapPayload): Promise<void> {
+  async saveSessionMemory(deviceId: string, recap: SessionRecapPayload, chatMemories?: string[]): Promise<void> {
     if (!this.initialized || !this.client || !this.assistantId) {
       console.warn('[Backboard] Not initialized; session memory not saved');
       return;
@@ -144,7 +154,11 @@ class BackboardService {
       const topDriftApp = recap.appBreakdown
         .find(a => a.category === 'distraction')?.app || 'none';
 
-      const content = `Session on task "${recap.task}": ${recap.durationMin} min, ${focusPct}% focus, ${recap.totalSwitches} switches, top distraction: ${topDriftApp}, nudges: ${recap.nudgesReceived}.`;
+      const chatSummary = chatMemories && chatMemories.length > 0
+        ? ` Chats: ${chatMemories.join(' | ')}`
+        : '';
+
+      const content = `Session on task "${recap.task}": ${recap.durationMin} min, ${focusPct}% focus, ${recap.totalSwitches} switches, top distraction: ${topDriftApp}, nudges: ${recap.nudgesReceived}.${chatSummary}`;
 
       // Add to thread with memory enabled
       await this.client.addMemory(this.assistantId, { content });
@@ -159,6 +173,30 @@ class BackboardService {
     } catch (error) {
       console.error('[Backboard] Error saving session memory:', error);
       // Non-critical: don't crash the app if memory save fails
+    }
+  }
+
+  
+  /**
+   * Save a chat exchange to Backboard memory.
+   * Called after each ghost chat reply so future sessions can reference
+   * things the user has shared (preferences, context, personal details).
+   *
+   * @param deviceId - Unique device identifier
+   * @param event - The chat exchange to persist
+   */
+  async saveChatMemory(deviceId: string, event: ChatMemoryEvent): Promise<void> {
+    if (!this.initialized || !this.client || !this.assistantId) {
+      console.warn('[Backboard] Not initialized; chat memory not saved');
+      return;
+    }
+
+    try {
+      const content = `Chat during "${event.sessionTask}": User said: "${event.userMessage}" | Ghost replied: "${event.ghostResponse}"`;
+      await this.client.addMemory(this.assistantId, { content });
+      console.log('[Backboard] Chat memory saved:', content);
+    } catch (error) {
+      console.error('[Backboard] Error saving chat memory:', error);
     }
   }
 
@@ -231,10 +269,18 @@ export async function getBackboardContext(deviceId: string, sessionTask?: string
  * Save a completed session to memory.
  * Called by Person 1 when endSession() fires.
  */
-export async function saveSessionMemory(deviceId: string, recap: SessionRecapPayload): Promise<void> {
+export async function saveSessionMemory(deviceId: string, recap: SessionRecapPayload, chatMemories?: string[]): Promise<void> {
   console.log('[Backboard] saveSessionMemory called for task:', recap.task);
   const service = getBackboardService();
-  return service.saveSessionMemory(deviceId, recap);
+  return service.saveSessionMemory(deviceId, recap, chatMemories);
+}
+
+/**
+ * Save a ghost chat to memory.
+ */
+export async function saveChatMemory(deviceId: string, event: ChatMemoryEvent): Promise<void> {
+  const service = getBackboardService();
+  return service.saveChatMemory(deviceId, event);
 }
 
 /**
