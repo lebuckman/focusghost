@@ -375,9 +375,16 @@ export default function SessionRecap({ recap, onNewSession, onOpenSettings, acce
             <div style={{ fontSize: 9, color: '#737373', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 5, fontWeight: 500 }}>
               ghost trail insight
             </div>
-            <div style={{ fontSize: 11.5, color: '#d4d4d4', lineHeight: 1.55, letterSpacing: '-0.005em' }}>
-              {recap.insight}
-            </div>
+            {!recap.insight ? (
+              <div>
+                <div className="insight-shimmer" style={{ height: 10, borderRadius: 4, background: 'rgba(255,255,255,0.08)', marginBottom: 6, width: '92%' }} />
+                <div className="insight-shimmer" style={{ height: 10, borderRadius: 4, background: 'rgba(255,255,255,0.08)', width: '68%', animationDelay: '0.2s' }} />
+              </div>
+            ) : (
+              <div style={{ fontSize: 11.5, color: '#d4d4d4', lineHeight: 1.55, letterSpacing: '-0.005em' }}>
+                {recap.insight}
+              </div>
+            )}
           </div>
         </div>
       </div>

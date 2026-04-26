@@ -172,7 +172,6 @@ export default function App() {
     window.electronAPI.onSessionRecap((d) => {
       setRecap(d as SessionRecapPayload);
       setScreen('recap');
-      // Restore full window for the recap screen
       setCollapsed(false);
       window.electronAPI.expandWindow();
     });

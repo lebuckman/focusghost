@@ -418,7 +418,7 @@ export async function geminiGenerateInsight(
       6000,
     );
     const text = normalizeOutput(result || "");
-    return text;
+    return text || fallback;
   } catch {
     return fallback;
   }
