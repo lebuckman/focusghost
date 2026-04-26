@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import GhostMascot from '../components/GhostMascot';
 import type { ChatEntry, GhostMessagePayload, ChatResponsePayload } from '../../shared/ipc-contract';
-import { MOCK_CHAT_HISTORY, IPC } from '../../shared/ipc-contract';
+import { IPC } from '../../shared/ipc-contract';
 
 interface Props {
+  task: string;
   onBack: () => void;
 }
 
@@ -15,13 +16,26 @@ function relativeTime(timestamp: number): string {
   return `${Math.floor(m / 60)}h ago`;
 }
 
-export default function GhostChat({ onBack }: Props) {
-  const [chatHistory, setChatHistory] = useState<ChatEntry[]>(MOCK_CHAT_HISTORY);
+export default function GhostChat({ task, onBack }: Props) {
+  const [chatHistory, setChatHistory] = useState<ChatEntry[]>([]);
   const [input, setInput]             = useState('');
   const [isThinking, setIsThinking]   = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Track whether we've already shown the opening greeting
+  const greeted = useRef(false);
 
   useEffect(() => {
+    // Ghost greeting on first open — only once per mount
+    if (!greeted.current) {
+      greeted.current = true;
+      const greeting: ChatEntry = {
+        role: 'ghost',
+        content: `hey — i'm here while you work on "${task}". i'll stay quiet unless something changes.`,
+        timestamp: Date.now(),
+      };
+      setChatHistory([greeting]);
+    }
+
     window.electronAPI.onGhostMessage((d) => {
       const m = d as GhostMessagePayload;
       setChatHistory((h) => [...h, { role: 'ghost', content: m.message, timestamp: m.timestamp }]);
@@ -38,7 +52,6 @@ export default function GhostChat({ onBack }: Props) {
     };
   }, []);
 
-  // Auto-scroll on new messages
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -54,10 +67,6 @@ export default function GhostChat({ onBack }: Props) {
     setChatHistory(next);
     setIsThinking(true);
     window.electronAPI.sendChat({ message: text, chatHistory: next });
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') sendMessage();
   };
 
   return (
@@ -76,7 +85,6 @@ export default function GhostChat({ onBack }: Props) {
           <div style={{ fontSize: 12, fontWeight: 500, color: '#e5e5e5', letterSpacing: '-0.01em' }}>ghost companion</div>
           <div style={{ fontSize: 10, color: '#737373' }}>your focus buddy</div>
         </div>
-        {/* Live indicator */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 9, color: '#2dd4bf', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
           <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#2dd4bf', animation: 'pulseDot 2s ease-in-out infinite' }} />
           live
@@ -114,7 +122,7 @@ export default function GhostChat({ onBack }: Props) {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
+            onKeyDown={(e) => { if (e.key === 'Enter') sendMessage(); }}
             placeholder="chat with your ghost…"
             style={{
               flex: 1,

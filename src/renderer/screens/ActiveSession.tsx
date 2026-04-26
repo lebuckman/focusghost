@@ -1,21 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import GhostMascot from '../components/GhostMascot';
 import AppBadge from '../components/AppBadge';
 import MetricChip from '../components/MetricChip';
-import NudgeOverlay from '../components/NudgeOverlay';
-import type {
-  SessionUpdate,
-  SessionRecapPayload,
-  NudgePayload,
-  WindowCategory,
-} from '../../shared/ipc-contract';
-import { MOCK_SESSION_UPDATE, IPC } from '../../shared/ipc-contract';
+import type { SessionUpdate, WindowCategory } from '../../shared/ipc-contract';
 
 interface Props {
   task: string;
   durationMin: number;
+  sessionUpdate: SessionUpdate;
   onOpenChat: () => void;
-  onRecap: (data: SessionRecapPayload) => void;
 }
 
 function fmtCountdown(sec: number): string {
@@ -54,34 +47,15 @@ const iconBtn: React.CSSProperties = {
   justifyContent: 'center',
 };
 
-export default function ActiveSession({ task, durationMin, onOpenChat, onRecap }: Props) {
-  const [session, setSession] = useState<SessionUpdate>(MOCK_SESSION_UPDATE);
-  const [nudge, setNudge]     = useState<NudgePayload | null>(null);
-
+export default function ActiveSession({ task, durationMin, sessionUpdate, onOpenChat }: Props) {
+  // endSession IPC is fired from the button directly; session recap listener lives in App
   useEffect(() => {
-    window.electronAPI.onSessionUpdate((d) => setSession(d as SessionUpdate));
-    window.electronAPI.onOpenGhostChat(() => onOpenChat());
-    window.electronAPI.onSessionRecap((d) => onRecap(d as SessionRecapPayload));
-    window.electronAPI.onNudge((d) => setNudge(d as NudgePayload));
-
-    return () => {
-      window.electronAPI.removeAllListeners(IPC.SESSION_UPDATE);
-      window.electronAPI.removeAllListeners(IPC.OPEN_GHOST_CHAT);
-      window.electronAPI.removeAllListeners(IPC.SESSION_RECAP);
-      window.electronAPI.removeAllListeners(IPC.TRIGGER_NUDGE);
-    };
+    // nothing to register — all IPC listeners live in App.tsx
   }, []);
 
   const durationSec = durationMin * 60;
-  const remaining = Math.max(0, durationSec - session.elapsedSec);
-  const progress = Math.min(1, session.elapsedSec / Math.max(1, durationSec));
-
-  const handleDismiss = (action: 'acknowledged' | 'break') => {
-    window.electronAPI.dismissNudge();
-    setNudge(null);
-    // action is sent via the IPC payload in a real implementation
-    void action;
-  };
+  const remaining = Math.max(0, durationSec - sessionUpdate.elapsedSec);
+  const progress = Math.min(1, sessionUpdate.elapsedSec / Math.max(1, durationSec));
 
   return (
     <div
@@ -146,16 +120,16 @@ export default function ActiveSession({ task, durationMin, onOpenChat, onRecap }
       }}>
         <div style={{ fontSize: 10, color: '#737373', textTransform: 'uppercase', letterSpacing: '0.08em' }}>now</div>
         <div style={{ fontSize: 12, color: '#e5e5e5', fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {session.currentApp}
+          {sessionUpdate.currentApp}
         </div>
-        <AppBadge category={session.category} app={session.currentApp} />
+        <AppBadge category={sessionUpdate.category} app={sessionUpdate.currentApp} />
       </div>
 
       {/* Metric chips */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, padding: '12px 16px' }}>
-        <MetricChip label="switches" value={session.switchCount} />
-        <MetricChip label="focus"    value={fmtDuration(session.focusSec)} color="teal" />
-        <MetricChip label="drift"    value={fmtDuration(session.driftSec)} color={session.driftSec > 60 ? 'red' : undefined} />
+        <MetricChip label="switches" value={sessionUpdate.switchCount} />
+        <MetricChip label="focus"    value={fmtDuration(sessionUpdate.focusSec)} color="teal" />
+        <MetricChip label="drift"    value={fmtDuration(sessionUpdate.driftSec)} color={sessionUpdate.driftSec > 60 ? 'red' : undefined} />
       </div>
 
       {/* Activity feed */}
@@ -164,20 +138,25 @@ export default function ActiveSession({ task, durationMin, onOpenChat, onRecap }
           recent activity
         </div>
         <div className="fg-scroll" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {session.recentSwitches.length === 0 && (
+          {sessionUpdate.recentSwitches.length === 0 && (
             <div style={{ fontSize: 11, color: '#525252', fontStyle: 'italic' }}>no switches yet</div>
           )}
-          {session.recentSwitches.slice(0, 5).map((sw, i) => (
+          {sessionUpdate.recentSwitches.slice(0, 5).map((sw, i) => {
+            const useTitleForDisplay = sw.title && (sw.category === 'research' || sw.category === 'distraction' || sw.category === 'unknown');
+            const rawLabel = useTitleForDisplay ? sw.title! : sw.app;
+            const label = rawLabel.length > 34 ? rawLabel.slice(0, 34) + '…' : rawLabel;
+            return (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, opacity: 1 - i * 0.12 }}>
               <div style={{ width: 6, height: 6, borderRadius: '50%', background: CATEGORY_DOT[sw.category] ?? '#737373', flexShrink: 0 }} />
               <div style={{ flex: 1, color: '#d4d4d4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {sw.app}
+                {label}
               </div>
               <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: '#737373', fontVariantNumeric: 'tabular-nums' }}>
                 {new Date(sw.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -207,14 +186,10 @@ export default function ActiveSession({ task, durationMin, onOpenChat, onRecap }
         bottom: 58,
         right: 12,
         pointerEvents: 'none',
-        opacity: nudge ? 0.3 : 1,
         transition: 'opacity 0.3s',
       }}>
-        <GhostMascot state={session.ghostState} size={40} />
+        <GhostMascot state={sessionUpdate.ghostState} size={40} />
       </div>
-
-      {/* Nudge overlay */}
-      <NudgeOverlay nudge={nudge} onDismiss={handleDismiss} onOpenChat={onOpenChat} />
     </div>
   );
 }
