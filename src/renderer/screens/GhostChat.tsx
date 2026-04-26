@@ -7,6 +7,7 @@ import { IPC } from '../../shared/ipc-contract';
 interface Props {
   task: string;
   trigger?: string;
+  prefillMessage?: string;
   onBack: () => void;
   onOpenSettings: () => void;
   onCollapse: () => void;
@@ -21,7 +22,7 @@ function relativeTime(timestamp: number): string {
   return `${Math.floor(m / 60)}h ago`;
 }
 
-export default function GhostChat({ task, trigger, onBack, onOpenSettings, onCollapse, accent }: Props) {
+export default function GhostChat({ task, trigger, prefillMessage, onBack, onOpenSettings, onCollapse, accent }: Props) {
   const [chatHistory, setChatHistory] = useState<ChatEntry[]>([]);
   const [input, setInput]             = useState('');
   const [isThinking, setIsThinking]   = useState(false);
@@ -40,7 +41,17 @@ export default function GhostChat({ task, trigger, onBack, onOpenSettings, onCol
           : `hey — i'm here while you work on "${task}". i'll stay quiet unless something changes.`,
         timestamp: Date.now(),
       };
-      setChatHistory([greeting]);
+
+      if (prefillMessage) {
+        // Chip was tapped — add the chip text as the user's first message and auto-send it
+        const userMsg: ChatEntry = { role: 'user', content: prefillMessage, timestamp: Date.now() + 1 };
+        const initialHistory = [greeting, userMsg];
+        setChatHistory(initialHistory);
+        setIsThinking(true);
+        window.electronAPI.sendChat({ message: prefillMessage, chatHistory: initialHistory });
+      } else {
+        setChatHistory([greeting]);
+      }
     }
 
     window.electronAPI.onGhostMessage((d) => {

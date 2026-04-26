@@ -81,7 +81,8 @@ export default function App() {
   const [activeTask,  setActiveTask]  = useState('');
   const [activeMins,  setActiveMins]  = useState(30);
   const [nudge,       setNudge]       = useState<NudgePayload | null>(null);
-  const [chatTrigger, setChatTrigger] = useState<string | undefined>(undefined);
+  const [chatTrigger,    setChatTrigger]    = useState<string | undefined>(undefined);
+  const [chatPrefill,    setChatPrefill]    = useState<string | undefined>(undefined);
   const [settings,    setSettings]    = useState<AppSettings>({ ...DEFAULT_SETTINGS });
   const [collapsed,   setCollapsed]   = useState(false);
   const dimTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -161,6 +162,7 @@ export default function App() {
     window.electronAPI.onOpenGhostChat((d) => {
       const payload = d as OpenGhostChatPayload;
       setChatTrigger(payload?.trigger);
+      setChatPrefill(payload?.prefillMessage);
       setScreen('chat');
       // Always expand so the chat screen renders in the full window
       setCollapsed(false);
@@ -261,9 +263,10 @@ export default function App() {
           <GhostChat
             task={activeTask}
             trigger={chatTrigger}
-            onBack={() => { setChatTrigger(undefined); setScreen('session'); }}
+            prefillMessage={chatPrefill}
+            onBack={() => { setChatTrigger(undefined); setChatPrefill(undefined); setScreen('session'); }}
             onOpenSettings={() => openSettings('chat')}
-            onCollapse={() => { setChatTrigger(undefined); setScreen('session'); collapse(); }}
+            onCollapse={() => { setChatTrigger(undefined); setChatPrefill(undefined); setScreen('session'); collapse(); }}
             accent={accent}
           />
         )}

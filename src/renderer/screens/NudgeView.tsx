@@ -23,7 +23,13 @@ export default function NudgeView() {
   }, []);
 
   const dismiss    = () => window.electronAPI.dismissNudge();
-  const stuck      = () => { window.electronAPI.dismissNudge(); window.electronAPI.requestGhostChat(); };
+  const stuck      = (reason?: string) => {
+    window.electronAPI.dismissNudge();
+    // "i'm fine" just closes the popup with no chat
+    if (reason === "i'm fine") return;
+    // 'chat_with_ghost' opens chat without a prefill; chip text becomes the first user message
+    window.electronAPI.requestGhostChat(reason !== 'chat_with_ghost' ? reason : undefined);
+  };
   const endSession = () => { window.electronAPI.dismissNudge(); window.electronAPI.endSession(); };
 
   return (

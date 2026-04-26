@@ -21,7 +21,7 @@ declare global {
       collapseWindow:     () => void;
       expandWindow:       () => void;
       getSettings:        () => Promise<unknown>;
-      requestGhostChat:   () => Promise<void>;
+      requestGhostChat:   (reason?: string) => Promise<void>;
       setWindowDim:       (dimmed: boolean) => Promise<void>;
       platform:           string;
     };

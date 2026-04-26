@@ -71,7 +71,7 @@ export interface NudgePayload {
     blockUntil?: number;
   };
 }
-export interface OpenGhostChatPayload { trigger: DriftType; }
+export interface OpenGhostChatPayload { trigger: DriftType; prefillMessage?: string; }
 export interface GhostMessagePayload  { message: string; trigger: GhostMessageTrigger; timestamp: number; }
 export interface ChatResponsePayload  { message: string; timestamp: number; }
 

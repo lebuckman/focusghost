@@ -690,8 +690,8 @@ function registerIPC() {
 
   ipcMain.handle(IPC.GET_SETTINGS, () => ({ ...settings }));
 
-  ipcMain.handle(IPC.REQUEST_GHOST_CHAT, () => {
-    mainWindow?.webContents.send(IPC.OPEN_GHOST_CHAT, { trigger: 'stuck' });
+  ipcMain.handle(IPC.REQUEST_GHOST_CHAT, (_e, reason?: string) => {
+    mainWindow?.webContents.send(IPC.OPEN_GHOST_CHAT, { trigger: 'stuck', prefillMessage: reason });
   });
 
   ipcMain.handle(IPC.SET_WINDOW_DIM, (_e, dimmed: boolean) => {
