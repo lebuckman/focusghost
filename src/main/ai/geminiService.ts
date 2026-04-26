@@ -58,28 +58,28 @@ let modelCache: {
 
 function getFallbackNudge(driftType: DriftType): string {
   if (driftType === "stuck") {
-    return `You look stuck on this step. Want to tell me what is snagging you so we can pick one next action?`;
+    return `you look stuck on this step. want to tell me what's snagging you?`;
   }
   if (driftType === "frequency") {
-    return `I noticed a lot of app switching in the last few minutes. Want to try a 5-minute focus sprint on just this task?`;
+    return `i noticed you switched between apps a few times. want to try a 5-minute focus sprint?`;
   }
-  return `You drifted away from your task for a bit. Want to close distractions and do one focused pass together?`;
+  return `you drifted away for a bit... are you ready to jump back in?`;
 }
 
 function getFallbackChat(task: string): string {
-  return "Got you. Let's shrink it to one step. What's the exact thing you're trying to finish right now?";
+  return "got you. let's shrink it down. what's one thing you're trying to finish right now?";
 }
 
 function getFallbackInsight(session: SessionStateForAI): string {
   const totalSec = Math.max(1, session.focusSec + session.driftSec);
   const focusPct = Math.round((session.focusSec / totalSec) * 100);
-  if (focusPct >= 80) {
-    return `Strong session: ${focusPct}% focused on "${session.task}". Keep this same start routine next time.`;
+  if (focusPct >= 70) {
+    return `great session: ${focusPct}% focused on "${session.task}". i'm proud of you for staying on task today. keep up the good work!`;
   }
   if (focusPct >= 60) {
-    return `Solid effort: ${focusPct}% focus on "${session.task}". Reducing app switches early could lift the next session.`;
+    return `strong session: ${focusPct}% focus on "${session.task}". remember that i'm always here to help! keep up the good work`;
   }
-  return `Challenging session at ${focusPct}% focus on "${session.task}". Try one tiny first step before opening extra tabs next time.`;
+  return `solid effort session at ${focusPct}% focus on "${session.task}". remember that i'm always here to help!`;
 }
 
 function getRecentApps(session: SessionStateForAI, limit = 5): string[] {
@@ -198,9 +198,9 @@ export async function geminiGenerateNudge(
     `Drift type: "${driftType}"`,
     `Historical pattern from past sessions (used sparingly to personalize message): "${formatContext(backboardContext)}"`,
     `If the user has shared personal interests in past chats, customize chats to appeal to their interests or personality traits when relevant.`,
-    `(e.g. If the user likes sports, you can say "Want me to help you get the ball rolling?".)`,
+    `(e.g. If the user likes sports, you can say "want me to help you get the ball rolling?".)`,
     `If the user reveals their emotional state, provide empathetic encouragement specific to their state of mind.`,
-    `(e.g., If the user is working on math homework and shares that they are frustrated, you can say "I know math homework can be frustrating, but I'm here to help!")`,
+    `(e.g., If the user is working on math homework and shares that they are frustrated, you can say "i know math homework can be frustrating, but i'm here to help!")`,
     AI_COPY.nudgeFormat,
     AI_COPY.nudgeConstraint,
     AI_COPY.noLecture,
@@ -255,24 +255,24 @@ export async function geminiGenerateChat(
     "- Off-track harmless question: answer briefly, then gently redirect to the current task.",
     "- Clear next step from user: affirm it, then tell them what to do next.",
     "Examples:",
-    "Bad: It sounds like finding a title is proving tricky. What aspects are difficult to pin down?",
-    "Good: Got you. Send me your topic and main stance, and I'll help turn it into 3 title options.",
-    "Bad: How are you approaching that calculation?",
-    "Good: Nice, add the numbers first. Once you have the total, divide by how many values there are.",
-    "Bad: What will you do with that total once you've added everyone up?",
-    "Good: Good. After the total, count how many values you have and divide by that count.",
+    "Bad: it sounds like finding a title is proving tricky. what aspects are difficult to pin down?",
+    "Good: got you. send me your topic and main stance, and i'll help turn it into 3 title options.",
+    "Bad: how are you approaching that calculation?",
+    "Good: nice, add the numbers first. once you have the total, divide by how many values there are.",
+    "Bad: what will you do with that total once you've added everyone up?",
+    "Good: good. after the total, count how many values you have and divide by that count.",
     "Relevant question example:",
     "User: How do I find the mean?",
-    "Good: Add all the numbers, then divide by how many numbers there are. Start by getting the total first.",
+    "Good: add all the numbers, then divide by how many numbers there are. start by getting the total first.",
     "Off-track question example:",
-    "User: What's the best fast food place?",
-    "Good: Taco Bell is solid if you want cheap and quick. Tiny redirect though, let's finish this focus step first.",
+    "User: what's the best fast food place?",
+    "Good: Taco Bell is solid if you want cheap and quick. tiny redirect though, let's finish this focus step first.",
     "Stuck example:",
     "User: I'm stuck on my speech title.",
-    "Good: Got you. Give me the topic and whether you're trying to persuade or inform, and I'll help make a few title options.",
+    "Good: got you. give me the topic and whether you're trying to persuade or inform, and i'll help make a few title options.",
     "Clear next step example:",
     "User: I have to add everyone up.",
-    "Good: Yep, that's the right move. Add them carefully, then count how many people are in the list.",
+    "Good: yep, that's the right move. add them carefully, then count how many people are in the list.",
   ].join("\n");
 
   const text = await generateText(prompt);
