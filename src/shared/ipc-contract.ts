@@ -62,6 +62,15 @@ export interface SessionRecapPayload {
   switchLog: SwitchEntry[];
 }
 
+export interface DriftEvent {
+  type: 'distraction' | 'stuck' | 'frequency' | 'inactivity';
+  app?: string;
+  timestamp: number;
+  sessionTask: string;
+  recoveryTime?: number;
+  userResponded?: 'back_to_work' | 'im_stuck' | 'break' | 'dismissed';
+}
+
 export interface AppSettings {
   driftThreshold: number;
   inactivityThreshold: number;
