@@ -20,6 +20,8 @@ declare global {
       minimizeWindow:     () => void;
       collapseWindow:     () => void;
       expandWindow:       () => void;
+      getSettings:        () => Promise<unknown>;
+      setWindowDim:       (dimmed: boolean) => Promise<void>;
     };
   }
 }

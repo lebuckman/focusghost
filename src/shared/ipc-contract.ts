@@ -160,6 +160,7 @@ export interface AppSettings {
   nudgeSensitivity: "gentle" | "balanced" | "strict";
   alwaysOnTop: boolean;
   autoCollapse: boolean;
+  autoDim: boolean;
 }
 
 export interface ActiveSession {
@@ -190,6 +191,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   nudgeSensitivity: "balanced",
   alwaysOnTop: true,
   autoCollapse: false,
+  autoDim: false,
 };
 
 export const MOCK_SESSION_UPDATE: SessionUpdate = {
