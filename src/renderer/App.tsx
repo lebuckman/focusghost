@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import TaskDeclaration from './screens/TaskDeclaration';
 import ActiveSession   from './screens/ActiveSession';
 import GhostChat       from './screens/GhostChat';
@@ -10,6 +10,7 @@ import type { SessionRecapPayload, NudgePayload, SessionUpdate, OpenGhostChatPay
 import { IPC, DEFAULT_SETTINGS } from '../shared/ipc-contract';
 
 const isNudgeView = new URLSearchParams(window.location.search).get('view') === 'nudge';
+const isWindows   = window.electronAPI.platform === 'win32';
 
 const ACCENT_MAP: Record<AppSettings['accentColor'], string> = {
   teal:   '#2dd4bf',
@@ -20,24 +21,52 @@ const ACCENT_MAP: Record<AppSettings['accentColor'], string> = {
 // ─── Custom frameless title bar ───────────────────────────────────────────────
 
 function TitleBar({ alwaysOnTop }: { alwaysOnTop: boolean }) {
+  const drag = { WebkitAppRegion: 'drag' } as React.CSSProperties;
+  const noDrag = { WebkitAppRegion: 'no-drag' } as React.CSSProperties;
   return (
     <div style={{
       height: 30, background: '#111111', flexShrink: 0,
       display: 'flex', alignItems: 'center',
-      paddingLeft: 65, paddingRight: 20,
+      paddingLeft: isWindows ? 12 : 65,
+      paddingRight: isWindows ? 0 : 20,
       position: 'relative',
+      ...drag,
     }}>
       <span style={{
         position: 'absolute', left: '50%', transform: 'translateX(-50%)',
         fontSize: 10, color: '#737373', fontWeight: 500,
         letterSpacing: '0.04em',
+        ...noDrag,
       }}>
         focusghost
       </span>
-      {alwaysOnTop && (
+      {/* macOS: pinned indicator sits on the right, traffic lights handle close/min */}
+      {!isWindows && alwaysOnTop && (
         <span style={{ fontSize: 9, color: '#525252', letterSpacing: '0.04em', marginLeft: 'auto' }}>
           ◉ pinned
         </span>
+      )}
+      {/* Windows: pinned indicator + close/minimize buttons */}
+      {isWindows && (
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', height: '100%', ...noDrag }}>
+          {alwaysOnTop && (
+            <span style={{ fontSize: 9, color: '#525252', letterSpacing: '0.04em', marginRight: 8 }}>
+              ◉ pinned
+            </span>
+          )}
+          <button
+            onClick={() => window.electronAPI.minimizeWindow()}
+            style={{ width: 46, height: 30, background: 'transparent', border: 'none', color: '#737373', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            &#x2013;
+          </button>
+          <button
+            onClick={() => window.electronAPI.closeWindow()}
+            style={{ width: 46, height: 30, background: 'transparent', border: 'none', color: '#737373', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            &#x2715;
+          </button>
+        </div>
       )}
     </div>
   );
