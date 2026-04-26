@@ -211,11 +211,11 @@ async function checkDistractionDrift(appName: string, category: WindowCategory, 
     });
   } else {
     await fireNudge({
-      type: 'in-app',
-      tier: 1,
-      message: `you've been on ${appName} for ${Math.round(consecutiveSec)}s. still working on "${session.task}"?`,
+      type: 'distraction-firm',
+      tier: 2,
+      message: `you've been on ${appName} for a bit. still working on "${session.task}"?`,
       driftType: 'distraction',
-      context: { appName, driftDurationSec: Math.round(consecutiveSec), ...sessionContext() },
+      context: { appName, driftDurationSec: Math.round(consecutiveSec), occurrences: recentOccurrences + 1, ...sessionContext() },
     });
   }
 }

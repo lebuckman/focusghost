@@ -71,7 +71,7 @@ function DistractionFirm({ nudge, task, remainingSec, onDismiss, onStuck }: Prop
 
   return (
     <PopupShell accent="#f87171">
-      <div style={{ padding: '20px 20px 18px' }}>
+      <div style={{ padding: '32px 24px 28px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
           <div style={{ flexShrink: 0 }}>
             <GhostMascot state="concerned" size={72} />
@@ -125,7 +125,7 @@ function DistractionHard({ nudge, investedSec, remainingSec, onDismiss, onEndSes
 
   return (
     <PopupShell accent="#f87171">
-      <div style={{ padding: '20px 20px 18px', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ padding: '32px 24px 28px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 80% 20%, rgba(248,113,113,0.08), transparent 50%)', pointerEvents: 'none' }} />
         <div style={{ position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
@@ -168,7 +168,7 @@ function StuckHelpful({ nudge, onDismiss, onStuck }: Props) {
   const chips = ["don't know where to start", 'syntax/error', "logic isn't clicking", 'just thinking', "i'm fine"];
   return (
     <PopupShell accent="#facc15">
-      <div style={{ padding: '20px 20px 18px' }}>
+      <div style={{ padding: '32px 24px 28px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
           <GhostMascot state="thinking" size={72} />
           <div style={{ flex: 1 }}>
@@ -219,7 +219,7 @@ function IdleSoft({ nudge, onDismiss, onEndSession }: Props) {
 
   return (
     <PopupShell accent="#a3a3a3">
-      <div style={{ padding: '24px 20px 20px', textAlign: 'center' }}>
+      <div style={{ padding: '48px 28px 44px', textAlign: 'center' }}>
         <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'center' }}>
           <GhostMascot state="sleepy" size={72} />
         </div>
@@ -246,7 +246,7 @@ function IdleSoft({ nudge, onDismiss, onEndSession }: Props) {
 function MilestonePositive({ nudge, onDismiss }: Props) {
   return (
     <PopupShell accent="#5dd8e6">
-      <div style={{ padding: '20px 20px 18px' }}>
+      <div style={{ padding: '32px 24px 28px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 }}>
           <GhostMascot state="happy" size={60} />
           <div>
@@ -272,7 +272,7 @@ function PatternObservational({ nudge, onDismiss }: Props) {
 
   return (
     <PopupShell accent="#60a5fa">
-      <div style={{ padding: '20px 20px 18px' }}>
+      <div style={{ padding: '32px 24px 28px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
           <GhostMascot state="calm" size={52} />
           <div style={{ flex: 1 }}>

@@ -8,12 +8,12 @@ declare const MAIN_WINDOW_VITE_NAME: string;
 let nudgeWindow: BrowserWindow | null = null;
 
 const NUDGE_DIMS: Partial<Record<NudgeType, { width: number; height: number }>> = {
-  'distraction-firm':      { width: 480, height: 260 },
-  'distraction-hard':      { width: 480, height: 300 },
-  'stuck-helpful':         { width: 480, height: 320 },
-  'idle-soft':             { width: 480, height: 260 },
-  'milestone-positive':    { width: 420, height: 220 },
-  'pattern-observational': { width: 480, height: 300 },
+  'distraction-firm':      { width: 480, height: 380 },
+  'distraction-hard':      { width: 480, height: 380 },
+  'stuck-helpful':         { width: 480, height: 380 },
+  'idle-soft':             { width: 480, height: 380 },
+  'milestone-positive':    { width: 480, height: 380 },
+  'pattern-observational': { width: 480, height: 380 },
 };
 
 export function showInterruptNudge(payload: NudgePayload): void {
@@ -23,7 +23,7 @@ export function showInterruptNudge(payload: NudgePayload): void {
     return;
   }
 
-  const dims = NUDGE_DIMS[payload.type] ?? { width: 480, height: 260 };
+  const dims = NUDGE_DIMS[payload.type] ?? { width: 480, height: 380 };
   const { width: sw, height: sh } = screen.getPrimaryDisplay().workAreaSize;
 
   nudgeWindow = new BrowserWindow({
