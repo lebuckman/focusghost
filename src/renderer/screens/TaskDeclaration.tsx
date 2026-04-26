@@ -1,13 +1,16 @@
 import React, { useRef, useState } from 'react';
 import GhostMascot from '../components/GhostMascot';
+import { GearIcon } from './Settings';
 
 interface Props {
   onStart: (task: string, durationMin: number) => void;
+  onOpenSettings: () => void;
+  accent: string;
 }
 
 const DURATIONS = [15, 30, 45, 60] as const;
 
-export default function TaskDeclaration({ onStart }: Props) {
+export default function TaskDeclaration({ onStart, onOpenSettings, accent }: Props) {
   const [task, setTask] = useState('');
   const [duration, setDuration] = useState<number>(30);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -34,11 +37,24 @@ export default function TaskDeclaration({ onStart }: Props) {
         fontFamily: "'Inter', sans-serif",
         color: '#e5e5e5',
         boxSizing: 'border-box',
+        position: 'relative',
       }}
     >
+      {/* Settings icon — top right */}
+      <button
+        onClick={onOpenSettings}
+        title="settings"
+        style={{ position: 'absolute', top: 10, right: 12, background: 'transparent', border: 'none', padding: 4, cursor: 'pointer', color: '#525252', display: 'flex', alignItems: 'center' }}
+        onMouseEnter={e => (e.currentTarget.style.color = '#a3a3a3')}
+        onMouseLeave={e => (e.currentTarget.style.color = '#525252')}
+        aria-label="settings"
+      >
+        <GearIcon size={14} />
+      </button>
+
       {/* Ghost */}
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
-        <GhostMascot state="calm" size={56} />
+        <GhostMascot state="calm" size={56} tint={accent} />
       </div>
 
       {/* Greeting */}
@@ -72,7 +88,7 @@ export default function TaskDeclaration({ onStart }: Props) {
           boxSizing: 'border-box',
           transition: 'border-color 0.15s',
         }}
-        onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(45,212,191,0.4)'; }}
+        onFocus={(e) => { e.currentTarget.style.borderColor = `${accent}66`; }}
         onBlur={(e)  => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
       />
 
@@ -89,12 +105,12 @@ export default function TaskDeclaration({ onStart }: Props) {
             onClick={() => setDuration(d)}
             style={{
               flex: 1,
-              background: duration === d ? 'rgba(45,212,191,0.12)' : '#1a1a1a',
-              border: `0.5px solid ${duration === d ? 'rgba(45,212,191,0.5)' : 'rgba(255,255,255,0.08)'}`,
+              background: duration === d ? `${accent}1e` : '#1a1a1a',
+              border: `0.5px solid ${duration === d ? `${accent}80` : 'rgba(255,255,255,0.08)'}`,
               borderRadius: 6,
               padding: '8px 0',
               fontSize: 12,
-              color: duration === d ? '#2dd4bf' : '#a3a3a3',
+              color: duration === d ? accent : '#a3a3a3',
               fontFamily: 'inherit',
               cursor: 'pointer',
               transition: 'all 0.15s',
@@ -114,8 +130,8 @@ export default function TaskDeclaration({ onStart }: Props) {
         onClick={handleStart}
         style={{
           width: '100%',
-          background: canStart ? '#2dd4bf' : '#1a1a1a',
-          border: `0.5px solid ${canStart ? '#2dd4bf' : 'rgba(255,255,255,0.08)'}`,
+          background: canStart ? accent : '#1a1a1a',
+          border: `0.5px solid ${canStart ? accent : 'rgba(255,255,255,0.08)'}`,
           borderRadius: 6,
           padding: '11px 0',
           fontSize: 12,

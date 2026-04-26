@@ -1,12 +1,23 @@
 import { useEffect, useState } from 'react';
 import { NudgeContent } from '../components/NudgePopup';
-import type { NudgePayload } from '../../shared/ipc-contract';
+import type { NudgePayload, AppSettings } from '../../shared/ipc-contract';
 import { IPC } from '../../shared/ipc-contract';
 
+const ACCENT_MAP: Record<AppSettings['accentColor'], string> = {
+  teal:   '#2dd4bf',
+  violet: '#a78bfa',
+  amber:  '#facc15',
+};
+
 export default function NudgeView() {
-  const [nudge, setNudge] = useState<NudgePayload | null>(null);
+  const [nudge,  setNudge]  = useState<NudgePayload | null>(null);
+  const [accent, setAccent] = useState('#2dd4bf');
 
   useEffect(() => {
+    window.electronAPI.getSettings().then(s => {
+      const settings = s as Partial<AppSettings>;
+      if (settings.accentColor) setAccent(ACCENT_MAP[settings.accentColor] ?? '#2dd4bf');
+    });
     window.electronAPI.onNudge((d) => setNudge(d as NudgePayload));
     return () => window.electronAPI.removeAllListeners(IPC.TRIGGER_NUDGE);
   }, []);
@@ -34,6 +45,7 @@ export default function NudgeView() {
           onDismiss={dismiss}
           onStuck={stuck}
           onEndSession={endSession}
+          accent={accent}
         />
       ) : (
         <div style={{ fontSize: 11, color: '#525252', padding: 20 }}>loading...</div>

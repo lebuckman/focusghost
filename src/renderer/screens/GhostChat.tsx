@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import GhostMascot from '../components/GhostMascot';
+import { GearIcon } from './Settings';
 import type { ChatEntry, GhostMessagePayload, ChatResponsePayload } from '../../shared/ipc-contract';
 import { IPC } from '../../shared/ipc-contract';
 
@@ -7,6 +8,9 @@ interface Props {
   task: string;
   trigger?: string;
   onBack: () => void;
+  onOpenSettings: () => void;
+  onCollapse: () => void;
+  accent: string;
 }
 
 function relativeTime(timestamp: number): string {
@@ -17,7 +21,7 @@ function relativeTime(timestamp: number): string {
   return `${Math.floor(m / 60)}h ago`;
 }
 
-export default function GhostChat({ task, trigger, onBack }: Props) {
+export default function GhostChat({ task, trigger, onBack, onOpenSettings, onCollapse, accent }: Props) {
   const [chatHistory, setChatHistory] = useState<ChatEntry[]>([]);
   const [input, setInput]             = useState('');
   const [isThinking, setIsThinking]   = useState(false);
@@ -119,7 +123,7 @@ export default function GhostChat({ task, trigger, onBack }: Props) {
         >
           ←
         </button>
-        <GhostMascot state="calm" size={30} />
+        <GhostMascot state="calm" size={30} tint={accent} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
@@ -140,7 +144,7 @@ export default function GhostChat({ task, trigger, onBack }: Props) {
             alignItems: "center",
             gap: 5,
             fontSize: 9,
-            color: "#2dd4bf",
+            color: accent,
             letterSpacing: "0.06em",
             textTransform: "uppercase",
           }}
@@ -150,12 +154,36 @@ export default function GhostChat({ task, trigger, onBack }: Props) {
               width: 5,
               height: 5,
               borderRadius: "50%",
-              background: "#2dd4bf",
+              background: accent,
               animation: "pulseDot 2s ease-in-out infinite",
             }}
           />
           live
         </div>
+        {/* Collapse button */}
+        <button
+          onClick={onCollapse}
+          title="collapse"
+          style={{ background: 'transparent', border: 'none', padding: '0 0 0 4px', cursor: 'pointer', color: '#525252', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#a3a3a3')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#525252')}
+          aria-label="collapse"
+        >
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+            <path d="M4.5 2H2V4.5M8.5 2H11V4.5M4.5 11H2V8.5M8.5 11H11V8.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        {/* Settings button */}
+        <button
+          onClick={onOpenSettings}
+          title="settings"
+          style={{ background: 'transparent', border: 'none', padding: '0 0 0 4px', cursor: 'pointer', color: '#525252', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#a3a3a3')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#525252')}
+          aria-label="settings"
+        >
+          <GearIcon size={13} />
+        </button>
       </div>
 
       {/* Message list */}
@@ -188,12 +216,12 @@ export default function GhostChat({ task, trigger, onBack }: Props) {
         )}
         {chatHistory.map((msg, i) =>
           msg.role === "user" ? (
-            <UserBubble key={i} entry={msg} />
+            <UserBubble key={i} entry={msg} accent={accent} />
           ) : (
-            <GhostBubble key={i} entry={msg} />
+            <GhostBubble key={i} entry={msg} accent={accent} />
           ),
         )}
-        {isThinking && <ThinkingBubble />}
+        {isThinking && <ThinkingBubble accent={accent} />}
       </div>
 
       {/* Composer */}
@@ -239,10 +267,7 @@ export default function GhostChat({ task, trigger, onBack }: Props) {
               width: 26,
               height: 26,
               borderRadius: "50%",
-              background:
-                input.trim() && !isThinking
-                  ? "#2dd4bf"
-                  : "rgba(45,212,191,0.15)",
+              background: input.trim() && !isThinking ? accent : `${accent}26`,
               border: "none",
               display: "flex",
               alignItems: "center",
@@ -255,7 +280,7 @@ export default function GhostChat({ task, trigger, onBack }: Props) {
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path
                 d="M1.5 6L10.5 1.5L8 6L10.5 10.5L1.5 6Z"
-                stroke={input.trim() && !isThinking ? "#0a0a0a" : "#2dd4bf"}
+                stroke={input.trim() && !isThinking ? "#0a0a0a" : accent}
                 strokeWidth="1"
                 strokeLinejoin="round"
                 fill={input.trim() && !isThinking ? "#0a0a0a" : "none"}
@@ -268,7 +293,7 @@ export default function GhostChat({ task, trigger, onBack }: Props) {
   );
 }
 
-function GhostBubble({ entry }: { entry: ChatEntry }) {
+function GhostBubble({ entry, accent }: { entry: ChatEntry; accent: string }) {
   return (
     <div
       style={{
@@ -279,7 +304,7 @@ function GhostBubble({ entry }: { entry: ChatEntry }) {
       }}
     >
       <div style={{ flexShrink: 0, marginTop: 2 }}>
-        <GhostMascot state="calm" size={22} />
+        <GhostMascot state="calm" size={22} tint={accent} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
@@ -312,7 +337,7 @@ function GhostBubble({ entry }: { entry: ChatEntry }) {
   );
 }
 
-function UserBubble({ entry }: { entry: ChatEntry }) {
+function UserBubble({ entry, accent }: { entry: ChatEntry; accent: string }) {
   return (
     <div
       style={{ display: "flex", justifyContent: "flex-end", paddingLeft: 32 }}
@@ -320,8 +345,8 @@ function UserBubble({ entry }: { entry: ChatEntry }) {
       <div>
         <div
           style={{
-            background: "rgba(45,212,191,0.12)",
-            border: "0.5px solid rgba(45,212,191,0.3)",
+            background: `${accent}1e`,
+            border: `0.5px solid ${accent}4d`,
             borderRadius: "10px 10px 2px 10px",
             padding: "7px 10px",
             fontSize: 11,
@@ -349,11 +374,11 @@ function UserBubble({ entry }: { entry: ChatEntry }) {
   );
 }
 
-function ThinkingBubble() {
+function ThinkingBubble({ accent }: { accent: string }) {
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
       <div style={{ flexShrink: 0, marginTop: 2 }}>
-        <GhostMascot state="thinking" size={22} />
+        <GhostMascot state="thinking" size={22} tint={accent} />
       </div>
       <div
         style={{
@@ -373,7 +398,7 @@ function ThinkingBubble() {
               width: 4,
               height: 4,
               borderRadius: "50%",
-              background: "#2dd4bf",
+              background: accent,
               animation: `thinkDot 1.2s ease-in-out ${i * 0.15}s infinite`,
             }}
           />

@@ -10,6 +10,7 @@ interface Props {
   onDismiss: () => void;
   onStuck: (reason?: string) => void;
   onEndSession: () => void;
+  accent?: string;
 }
 
 // ── Shared primitives ─────────────────────────────────────────────────────────
@@ -61,7 +62,7 @@ function Btn({ primary, accent = '#5dd8e6', onClick, children, style }: {
 
 // ── Popup variants ────────────────────────────────────────────────────────────
 
-function DistractionFirm({ nudge, task, remainingSec, onDismiss, onStuck }: Props) {
+function DistractionFirm({ nudge, task, remainingSec, onDismiss, onStuck, accent }: Props) {
   const appName = nudge.context?.appName ?? 'that app';
   const taskLabel = task || nudge.context?.task || 'your task';
   const driftSec = nudge.context?.driftDurationSec ?? 0;
@@ -74,7 +75,7 @@ function DistractionFirm({ nudge, task, remainingSec, onDismiss, onStuck }: Prop
       <div style={{ padding: '32px 24px 28px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
           <div style={{ flexShrink: 0 }}>
-            <GhostMascot state="concerned" size={72} />
+            <GhostMascot state="concerned" size={72} tint={accent} />
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 11, color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -120,7 +121,7 @@ function DistractionFirm({ nudge, task, remainingSec, onDismiss, onStuck }: Prop
   );
 }
 
-function DistractionHard({ nudge, investedSec, remainingSec, onDismiss, onEndSession }: Props) {
+function DistractionHard({ nudge, investedSec, remainingSec, onDismiss, onEndSession, accent }: Props) {
   const appName = nudge.context?.appName ?? 'that app';
 
   return (
@@ -129,7 +130,7 @@ function DistractionHard({ nudge, investedSec, remainingSec, onDismiss, onEndSes
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 80% 20%, rgba(248,113,113,0.08), transparent 50%)', pointerEvents: 'none' }} />
         <div style={{ position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
-            <GhostMascot state="concerned" size={72} />
+            <GhostMascot state="concerned" size={72} tint={accent} />
             <div>
               <div style={{ fontSize: 11, color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 4 }}>hard interrupt</div>
               <div style={{ fontSize: 22, color: '#ffffff', fontWeight: 700, letterSpacing: '-0.02em' }}>hey — eyes on me.</div>
@@ -164,13 +165,13 @@ function DistractionHard({ nudge, investedSec, remainingSec, onDismiss, onEndSes
   );
 }
 
-function StuckHelpful({ nudge, onDismiss, onStuck }: Props) {
+function StuckHelpful({ nudge, onDismiss, onStuck, accent }: Props) {
   const chips = ["don't know where to start", 'syntax/error', "logic isn't clicking", 'just thinking', "i'm fine"];
   return (
     <PopupShell accent="#facc15">
       <div style={{ padding: '32px 24px 28px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
-          <GhostMascot state="thinking" size={72} />
+          <GhostMascot state="thinking" size={72} tint={accent} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 11, color: '#facc15', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 6 }}>↳ checking in</div>
             <div style={{ fontSize: 22, color: '#ffffff', fontWeight: 700, lineHeight: 1.2, letterSpacing: '-0.01em', marginBottom: 6 }}>stuck on something?</div>
@@ -210,7 +211,7 @@ function StuckHelpful({ nudge, onDismiss, onStuck }: Props) {
   );
 }
 
-function IdleSoft({ nudge, onDismiss, onEndSession }: Props) {
+function IdleSoft({ nudge, onDismiss, onEndSession, accent }: Props) {
   const initialSec = nudge.context?.remainingSec ?? 120; // demo: 2min before auto-pause — restore to lower for production
   const [countdown, setCountdown] = useState(initialSec);
   useEffect(() => {
@@ -226,7 +227,7 @@ function IdleSoft({ nudge, onDismiss, onEndSession }: Props) {
     <PopupShell accent="#a3a3a3">
       <div style={{ padding: '48px 28px 44px', textAlign: 'center' }}>
         <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'center' }}>
-          <GhostMascot state="sleepy" size={72} />
+          <GhostMascot state="sleepy" size={72} tint={accent} />
         </div>
         <div style={{ fontSize: 22, color: '#ffffff', fontWeight: 700, letterSpacing: '-0.01em', marginBottom: 8 }}>still there?</div>
         <div style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.5, marginBottom: 20, maxWidth: 300, marginLeft: 'auto', marginRight: 'auto' }}>
@@ -248,12 +249,12 @@ function IdleSoft({ nudge, onDismiss, onEndSession }: Props) {
   );
 }
 
-function MilestonePositive({ nudge, onDismiss }: Props) {
+function MilestonePositive({ nudge, onDismiss, accent }: Props) {
   return (
     <PopupShell accent="#5dd8e6">
       <div style={{ padding: '32px 24px 28px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 }}>
-          <GhostMascot state="happy" size={60} />
+          <GhostMascot state="happy" size={60} tint={accent} />
           <div>
             <div style={{ fontSize: 11, color: '#5dd8e6', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 4 }}>milestone · 25 min</div>
             <div style={{ fontSize: 20, color: '#ffffff', fontWeight: 700, letterSpacing: '-0.01em' }}>deep focus reached.</div>
@@ -271,7 +272,7 @@ function MilestonePositive({ nudge, onDismiss }: Props) {
   );
 }
 
-function PatternObservational({ nudge, onDismiss }: Props) {
+function PatternObservational({ nudge, onDismiss, accent }: Props) {
   const appName = nudge.context?.appName ?? 'that app';
   const occurrences = nudge.context?.occurrences ?? 3;
 
@@ -279,7 +280,7 @@ function PatternObservational({ nudge, onDismiss }: Props) {
     <PopupShell accent="#60a5fa">
       <div style={{ padding: '32px 24px 28px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
-          <GhostMascot state="calm" size={52} />
+          <GhostMascot state="calm" size={52} tint={accent} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 11, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 4 }}>pattern noticed</div>
             <div style={{ fontSize: 18, color: '#ffffff', fontWeight: 600, lineHeight: 1.3, letterSpacing: '-0.01em' }}>

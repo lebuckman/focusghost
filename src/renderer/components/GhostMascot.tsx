@@ -4,6 +4,7 @@ import type { GhostMascotState } from '../../shared/ipc-contract';
 interface Props {
   state: GhostMascotState;
   size?: number;
+  tint?: string;
 }
 
 // Map ipc-contract states to visual states used in the design
@@ -39,12 +40,13 @@ const EYES: Record<VisualState, { yRatio: number; hRatio: number; wRatio: number
   sleepy:   { yRatio: 0.44, hRatio: 0.02, wRatio: 0.10, squint: 1 },
 };
 
-export default function GhostMascot({ state, size = 48 }: Props) {
+export default function GhostMascot({ state, size = 48, tint: tintOverride }: Props) {
   const vs = toVisual(state);
   const w = size;
   const h = size * 1.1;
   const eyes = EYES[vs];
-  const tint = TINT[vs];
+  const bodyTint = tintOverride ?? TINT[vs];
+  const shadowColor = tintOverride ?? '#5dd8e6';
 
   return (
     <div style={{ display: 'inline-block', width: w, height: h, flexShrink: 0 }}>
@@ -53,7 +55,7 @@ export default function GhostMascot({ state, size = 48 }: Props) {
         height={h}
         viewBox={`0 0 ${w} ${h}`}
         style={{
-          filter: 'drop-shadow(0 0 6px rgba(93,216,230,0.55)) drop-shadow(0 0 12px rgba(93,216,230,0.25))',
+          filter: `drop-shadow(0 0 6px ${shadowColor}8c) drop-shadow(0 0 12px ${shadowColor}40)`,
           animation: ANIM[vs],
         }}
       >
@@ -70,7 +72,7 @@ export default function GhostMascot({ state, size = 48 }: Props) {
             Q ${w * 0.22} ${h * 0.75}, ${w * 0.15} ${h * 0.85}
             Z
           `}
-          fill={tint}
+          fill={bodyTint}
           opacity={0.95}
         />
         {/* Left eye */}

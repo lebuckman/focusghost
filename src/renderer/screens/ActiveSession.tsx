@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import GhostMascot from '../components/GhostMascot';
 import AppBadge from '../components/AppBadge';
 import MetricChip from '../components/MetricChip';
+import { GearIcon } from './Settings';
 import type { SessionUpdate, SwitchEntry, WindowCategory } from '../../shared/ipc-contract';
 
 interface Props {
@@ -9,6 +10,11 @@ interface Props {
   durationMin: number;
   sessionUpdate: SessionUpdate;
   onOpenChat: () => void;
+  onOpenSettings: () => void;
+  collapsed: boolean;
+  onCollapse: () => void;
+  onExpand: () => void;
+  accent: string;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -236,7 +242,7 @@ function groupSwitches(switches: SwitchEntry[]): ActivityGroup[] {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function ActiveSession({ task, durationMin, sessionUpdate, onOpenChat }: Props) {
+export default function ActiveSession({ task, durationMin, sessionUpdate, onOpenChat, onOpenSettings, collapsed, onCollapse, onExpand, accent }: Props) {
   const durationSec = durationMin * 60;
 
   // Local 1-second tick so the countdown moves 1s at a time instead of jumping by 2
@@ -255,16 +261,11 @@ export default function ActiveSession({ task, durationMin, sessionUpdate, onOpen
   const progress = Math.min(1, localElapsed / Math.max(1, durationSec));
   const groups = groupSwitches(sessionUpdate.recentSwitches);
 
-  const [collapsed, setCollapsed] = useState(false);
-
   const statusDotColor = sessionUpdate.category === 'focus' || sessionUpdate.category === 'research'
     ? '#4ade80'
     : sessionUpdate.category === 'distraction'
       ? '#f87171'
       : '#737373';
-
-  const collapse = () => { setCollapsed(true);  window.electronAPI.collapseWindow(); };
-  const expand   = () => { setCollapsed(false); window.electronAPI.expandWindow();   };
 
   // ── Collapsed bar ──────────────────────────────────────────────────────────
   if (collapsed) {
@@ -276,13 +277,13 @@ export default function ActiveSession({ task, durationMin, sessionUpdate, onOpen
       }}>
         {/* Ghost — click to chat (expand window first) */}
         <button
-          onClick={() => { expand(); onOpenChat(); }}
+          onClick={() => { onExpand(); onOpenChat(); }}
           style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0, display: 'flex' }}
           onMouseEnter={e => (e.currentTarget.style.opacity = '0.8')}
           onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
           aria-label="open chat"
         >
-          <GhostMascot state={sessionUpdate.ghostState} size={28} />
+          <GhostMascot state={sessionUpdate.ghostState} size={28} tint={accent} />
         </button>
 
         {/* Status dot */}
@@ -312,14 +313,14 @@ export default function ActiveSession({ task, durationMin, sessionUpdate, onOpen
         {/* Countdown */}
         <div style={{
           fontFamily: "'JetBrains Mono', monospace", fontSize: 13,
-          color: '#2dd4bf', fontWeight: 500, fontVariantNumeric: 'tabular-nums', flexShrink: 0,
+          color: accent, fontWeight: 500, fontVariantNumeric: 'tabular-nums', flexShrink: 0,
         }}>
           {fmtCountdown(remaining)}
         </div>
 
         {/* Expand button */}
         <button
-          onClick={expand}
+          onClick={onExpand}
           title="expand"
           style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: '#525252', flexShrink: 0, display: 'flex', alignItems: 'center' }}
           onMouseEnter={e => (e.currentTarget.style.color = '#a3a3a3')}
@@ -329,6 +330,18 @@ export default function ActiveSession({ task, durationMin, sessionUpdate, onOpen
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
             <path d="M2 8.5V11H4.5M11 4.5V2H8.5M2 4.5V2H4.5M11 8.5V11H8.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
+        </button>
+
+        {/* Settings button — expands window first */}
+        <button
+          onClick={() => { onExpand(); onOpenSettings(); }}
+          title="settings"
+          style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: '#525252', flexShrink: 0, display: 'flex', alignItems: 'center' }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#a3a3a3')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#525252')}
+          aria-label="settings"
+        >
+          <GearIcon size={13} />
         </button>
       </div>
     );
@@ -353,13 +366,13 @@ export default function ActiveSession({ task, durationMin, sessionUpdate, onOpen
           </div>
           <div style={{
             fontFamily: "'JetBrains Mono', monospace", fontSize: 13,
-            color: '#2dd4bf', fontWeight: 500, fontVariantNumeric: 'tabular-nums', flexShrink: 0,
+            color: accent, fontWeight: 500, fontVariantNumeric: 'tabular-nums', flexShrink: 0,
           }}>
             {fmtCountdown(remaining)}
           </div>
           {/* Collapse button */}
           <button
-            onClick={collapse}
+            onClick={onCollapse}
             title="collapse"
             style={{ background: 'transparent', border: 'none', padding: '0 0 0 4px', cursor: 'pointer', color: '#525252', flexShrink: 0, display: 'flex', alignItems: 'center' }}
             onMouseEnter={e => (e.currentTarget.style.color = '#a3a3a3')}
@@ -370,10 +383,21 @@ export default function ActiveSession({ task, durationMin, sessionUpdate, onOpen
               <path d="M4.5 2H2V4.5M8.5 2H11V4.5M4.5 11H2V8.5M8.5 11H11V8.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
+          {/* Settings button */}
+          <button
+            onClick={onOpenSettings}
+            title="settings"
+            style={{ background: 'transparent', border: 'none', padding: '0 0 0 4px', cursor: 'pointer', color: '#525252', flexShrink: 0, display: 'flex', alignItems: 'center' }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#a3a3a3')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#525252')}
+            aria-label="settings"
+          >
+            <GearIcon size={13} />
+          </button>
         </div>
         {/* Progress bar */}
         <div style={{ height: 2, background: 'rgba(255,255,255,0.05)', borderRadius: 1, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${progress * 100}%`, background: '#2dd4bf', transition: 'width 0.5s linear' }} />
+          <div style={{ height: '100%', width: `${progress * 100}%`, background: accent, transition: 'width 0.5s linear' }} />
         </div>
       </div>
 
@@ -516,7 +540,7 @@ export default function ActiveSession({ task, durationMin, sessionUpdate, onOpen
         onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
         aria-label="open chat"
       >
-        <GhostMascot state={sessionUpdate.ghostState} size={40} />
+        <GhostMascot state={sessionUpdate.ghostState} size={40} tint={accent} />
       </button>
     </div>
   );
