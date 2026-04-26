@@ -22,6 +22,11 @@ import {
   type GhostMessagePayload,
   type OpenGhostChatPayload,
 } from './shared/ipc-contract';
+import {
+  generateChatResponse,
+  generateInsight,
+  generateNudgeMessage,
+} from './main/ai/aiOrchestrator';
 
 if (started) app.quit();
 
@@ -99,7 +104,7 @@ let preCheckinHeight = 620;
 let activeWinFn: (() => Promise<unknown>) | null = null;
 async function getActiveWin(): Promise<unknown> {
   if (!activeWinFn) {
-    const mod = await import('active-win');
+    const mod = await import("active-win");
     activeWinFn = (mod as { default: () => Promise<unknown> }).default;
   }
   return activeWinFn();
@@ -145,7 +150,7 @@ function sessionContext() {
   return { task: session.task, investedSec, remainingSec };
 }
 
-function fireNudge(payload: NudgePayload): boolean {
+async function fireNudge(payload: NudgePayload): Promise<boolean> {
   if (!session) return false;
   const isInterrupt = payload.driftType === 'distraction' || payload.driftType === 'stuck';
   if (!isInterrupt && !mainWindow) return false;
@@ -154,12 +159,16 @@ function fireNudge(payload: NudgePayload): boolean {
   if (cooldownExpiry !== undefined && now < cooldownExpiry) return false;
 
   session.nudgeCooldownUntil[payload.type] = now + (NUDGE_COOLDOWNS[payload.type] ?? 5 * 60 * 1000);
-  session.nudgeLog.push({ message: payload.message, driftType: payload.driftType, timestamp: now });
+
+  const aiMessage = await generateNudgeMessage(session, payload.driftType);
+  const finalPayload: NudgePayload = { ...payload, message: aiMessage };
+
+  session.nudgeLog.push({ message: finalPayload.message, driftType: payload.driftType, timestamp: now });
 
   if (isInterrupt) {
-    showInterruptNudge(payload);
+    showInterruptNudge(finalPayload);
   } else {
-    showCheckinNudge(mainWindow, payload);
+    showCheckinNudge(mainWindow, finalPayload);
   }
   return true;
 }
@@ -167,7 +176,7 @@ function fireNudge(payload: NudgePayload): boolean {
 // ── Drift detection ───────────────────────────────────────────────────────────
 
 
-function checkDistractionDrift(appName: string, category: WindowCategory, now: number) {
+async function checkDistractionDrift(appName: string, category: WindowCategory, now: number) {
   if (!session) return;
 
   if (category !== 'distraction') {
@@ -193,7 +202,7 @@ function checkDistractionDrift(appName: string, category: WindowCategory, now: n
 
   if (recentOccurrences >= 2) {
     // 3rd+ time (0-indexed: 2 prior + this one = 3rd)
-    fireNudge({
+    await fireNudge({
       type: 'distraction-firm',
       tier: 2,
       message: `third time on ${appName} in 10 minutes. your task is still waiting.`,
@@ -201,7 +210,7 @@ function checkDistractionDrift(appName: string, category: WindowCategory, now: n
       context: { appName, driftDurationSec: Math.round(consecutiveSec), occurrences: recentOccurrences + 1, ...sessionContext() },
     });
   } else {
-    fireNudge({
+    await fireNudge({
       type: 'in-app',
       tier: 1,
       message: `you've been on ${appName} for ${Math.round(consecutiveSec)}s. still working on "${session.task}"?`,
@@ -211,7 +220,7 @@ function checkDistractionDrift(appName: string, category: WindowCategory, now: n
   }
 }
 
-function checkStuckDrift(now: number) {
+async function checkStuckDrift(now: number) {
   if (!session) return;
   const windowStart = now - 5 * 60 * 1000;
   const recent = session.switchLog.filter(s => s.timestamp >= windowStart);
@@ -220,7 +229,7 @@ function checkStuckDrift(now: number) {
   const distractionCount = recent.filter(s => s.category === 'distraction').length;
   if (distractionCount / recent.length > 0.2) return;
 
-  const fired = fireNudge({
+  const fired = await fireNudge({
     type: 'stuck-helpful',
     tier: 2,
     message: `you've been cycling apps a lot — what's snagging you?`,
@@ -240,10 +249,10 @@ function checkStuckDrift(now: number) {
   }
 }
 
-function checkInactivity(now: number) {
+async function checkInactivity(now: number) {
   if (!session) return;
   if (now - session.lastAppChangeTime >= settings.inactivityThreshold * 1000) {
-    fireNudge({
+    await fireNudge({
       type: 'idle-soft',
       tier: 2,
       message: `still there? no window movement for ${Math.round(settings.inactivityThreshold / 60)} minutes.`,
@@ -252,12 +261,12 @@ function checkInactivity(now: number) {
   }
 }
 
-function checkMilestone(now: number) {
+async function checkMilestone(now: number) {
   if (!session) return;
   if (session.milestonesFired.has('25min')) return;
   if (now - session.lastSwitchTime >= 25 * 60 * 1000) {
     session.milestonesFired.add('25min');
-    fireNudge({
+    await fireNudge({
       type: 'milestone-positive',
       tier: 2,
       message: `25 minutes of deep focus — that's your best streak. keep it going.`,
@@ -330,9 +339,9 @@ async function pollActiveWindow() {
     }
 
     // Accumulate focus/drift in 2-second ticks
-    if (category === 'focus' || category === 'research') {
+    if (category === "focus" || category === "research") {
       session.focusSec += 2;
-    } else if (category === 'distraction') {
+    } else if (category === "distraction") {
       session.driftSec += 2;
     }
 
@@ -353,10 +362,10 @@ async function pollActiveWindow() {
     mainWindow.webContents.send(IPC.SESSION_UPDATE, update);
 
     if (settings.nudgeEnabled) {
-      checkDistractionDrift(appName, category, now);
-      checkStuckDrift(now);
-      checkInactivity(now);
-      checkMilestone(now);
+      await checkDistractionDrift(appName, category, now);
+      await checkStuckDrift(now);
+      await checkInactivity(now);
+      await checkMilestone(now);
     }
 
     // Persist live session state so teammates can read it
@@ -375,11 +384,9 @@ async function pollActiveWindow() {
 
 // ── Recap & end session ───────────────────────────────────────────────────────
 
-function buildRecap(): SessionRecapPayload {
-  if (!session) throw new Error('no active session');
-
+function buildRecap(currentSession: SessionState): SessionRecapPayload {
   const appTime = new Map<string, { seconds: number; category: WindowCategory }>();
-  const entries = session.switchLog;
+  const entries = currentSession.switchLog;
   for (let i = 0; i < entries.length; i++) {
     const from = entries[i].timestamp;
     const to = i + 1 < entries.length ? entries[i + 1].timestamp : Date.now();
@@ -388,52 +395,67 @@ function buildRecap(): SessionRecapPayload {
     if (existing) {
       existing.seconds += secs;
     } else {
-      appTime.set(entries[i].app, { seconds: secs, category: entries[i].category });
+      appTime.set(entries[i].app, {
+        seconds: secs,
+        category: entries[i].category,
+      });
     }
   }
 
   const appBreakdown = Array.from(appTime.entries())
-    .map(([appName, { seconds, category }]) => ({ app: appName, category, seconds }))
+    .map(([appName, { seconds, category }]) => ({
+      app: appName,
+      category,
+      seconds,
+    }))
     .sort((a, b) => b.seconds - a.seconds);
 
-  const totalSec = Math.max(1, session.focusSec + session.driftSec);
-  const focusPct = Math.round((session.focusSec / totalSec) * 100);
+  const totalSec = Math.max(
+    1,
+    currentSession.focusSec + currentSession.driftSec,
+  );
+  const focusPct = Math.round((currentSession.focusSec / totalSec) * 100);
   let insight: string;
   if (focusPct >= 80) {
-    insight = `Strong session — you stayed focused ${focusPct}% of the time on "${session.task}". Keep that streak going.`;
+    insight = `Strong session - you stayed focused ${focusPct}% of the time on "${currentSession.task}". Keep that streak going.`;
   } else if (focusPct >= 60) {
-    insight = `Decent focus at ${focusPct}% on "${session.task}". A few drifts but you pulled back. Try closing distracting tabs before the next session.`;
+    insight = `Decent focus at ${focusPct}% on "${currentSession.task}". A few drifts but you pulled back. Try closing distracting tabs before the next session.`;
   } else {
-    insight = `Tough one — only ${focusPct}% focus time. Identify what pulled you away from "${session.task}" and eliminate it before the next session.`;
+    insight = `Tough one - only ${focusPct}% focus time. Identify what pulled you away from "${currentSession.task}" and eliminate it before the next session.`;
   }
 
   return {
-    task: session.task,
-    durationMin: session.durationMin,
-    focusSec: session.focusSec,
-    driftSec: session.driftSec,
-    totalSwitches: session.switchCount,
-    nudgesReceived: session.nudgeLog.length,
+    task: currentSession.task,
+    durationMin: currentSession.durationMin,
+    focusSec: currentSession.focusSec,
+    driftSec: currentSession.driftSec,
+    totalSwitches: currentSession.switchCount,
+    nudgesReceived: currentSession.nudgeLog.length,
     nudgesDismissedAsBreak: 0,
     appBreakdown,
     insight,
-    switchLog: session.switchLog,
+    switchLog: currentSession.switchLog,
   };
 }
 
 function endSession() {
   if (!session) return;
-  if (session.pollTimer) clearInterval(session.pollTimer);
-  if (session.endTimer) clearTimeout(session.endTimer);
+  const endedSession = session;
+  if (endedSession.pollTimer) clearInterval(endedSession.pollTimer);
+  if (endedSession.endTimer) clearTimeout(endedSession.endTimer);
   if (titleSettleTimer) { clearTimeout(titleSettleTimer); titleSettleTimer = null; }
-  const recap = buildRecap();
-
-  const history = ((store.get('sessionHistory') as SessionRecapPayload[] | undefined) ?? []);
-  store.set('sessionHistory', [...history, recap].slice(-50));
-  store.delete('currentSession');
-
   session = null;
-  mainWindow?.webContents.send(IPC.SESSION_RECAP, recap);
+
+  void (async () => {
+    const recap = buildRecap(endedSession);
+    recap.insight = await generateInsight(endedSession);
+
+    const history = ((store.get('sessionHistory') as SessionRecapPayload[] | undefined) ?? []);
+    store.set('sessionHistory', [...history, recap].slice(-50));
+    store.delete('currentSession');
+
+    mainWindow?.webContents.send(IPC.SESSION_RECAP, recap);
+  })();
 }
 
 // ── IPC handlers ──────────────────────────────────────────────────────────────
@@ -481,18 +503,42 @@ function registerIPC() {
     endSession();
   });
 
-  ipcMain.handle(IPC.CHAT_MESSAGE, (_e, payload: { message: string; chatHistory: ChatEntry[] }) => {
-    if (!session) return;
-    const userEntry: ChatEntry = { role: 'user', content: payload.message, timestamp: Date.now() };
-    session.chatHistory.push(userEntry);
+  ipcMain.handle(
+    IPC.CHAT_MESSAGE,
+    async (_e, payload: { message: string; chatHistory: ChatEntry[] }) => {
+      if (!session) return;
 
-    // Stub response — replace with Gemini call when ready
-    const replyText = `Hang in there — you're working on "${session.task}". What's the specific thing blocking you right now?`;
-    const ghostEntry: ChatEntry = { role: 'ghost', content: replyText, timestamp: Date.now() };
-    session.chatHistory.push(ghostEntry);
+      const activeSession = session;
+      const userEntry: ChatEntry = {
+        role: "user",
+        content: payload.message,
+        timestamp: Date.now(),
+      };
+      activeSession.chatHistory.push(userEntry);
 
-    mainWindow?.webContents.send(IPC.CHAT_RESPONSE, { message: replyText, timestamp: ghostEntry.timestamp });
-  });
+      const incomingHistory = payload.chatHistory ?? [];
+      const historyForModel =
+        incomingHistory.length > 0
+          ? incomingHistory
+          : activeSession.chatHistory;
+      const replyText = await generateChatResponse(
+        activeSession,
+        payload.message,
+        historyForModel,
+      );
+      const ghostEntry: ChatEntry = {
+        role: "ghost",
+        content: replyText,
+        timestamp: Date.now(),
+      };
+      activeSession.chatHistory.push(ghostEntry);
+
+      mainWindow?.webContents.send(IPC.CHAT_RESPONSE, {
+        message: replyText,
+        timestamp: ghostEntry.timestamp,
+      });
+    },
+  );
 
   ipcMain.handle(IPC.DISMISS_NUDGE, () => {
     if (isNudgeWindowOpen()) {
@@ -543,7 +589,7 @@ const createWindow = () => {
     resizable: true,
     movable: true,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
@@ -559,18 +605,20 @@ const createWindow = () => {
   }
 
   mainWindow.webContents.openDevTools();
-  mainWindow.on('closed', () => { mainWindow = null; });
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+  });
 };
 
-app.on('ready', () => {
+app.on("ready", () => {
   registerIPC();
   createWindow();
 });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
 });
 
-app.on('activate', () => {
+app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
