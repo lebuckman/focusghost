@@ -13,9 +13,10 @@ const MIN_CUSTOM = 1;
 const MAX_CUSTOM = 480;
 
 export default function TaskDeclaration({ onStart, onOpenSettings, accent }: Props) {
-  const [task,        setTask]        = useState('');
-  const [duration,    setDuration]    = useState<number>(30);
-  const [isCustom,      setIsCustom]      = useState(false);
+  const [task,            setTask]           = useState('');
+  const [duration,        setDuration]       = useState<number>(30);
+  const [hoveredDuration, setHoveredDuration] = useState<number | null>(null);
+  const [isCustom,        setIsCustom]        = useState(false);
   const [customFocused, setCustomFocused] = useState(false);
   const [customValue,   setCustomValue]   = useState('');
   const inputRef       = useRef<HTMLInputElement>(null);
@@ -112,8 +113,10 @@ export default function TaskDeclaration({ onStart, onOpenSettings, accent }: Pro
           boxSizing: 'border-box',
           transition: 'border-color 0.15s',
         }}
-        onFocus={(e) => { e.currentTarget.style.borderColor = `${accent}66`; }}
-        onBlur={(e)  => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+        onMouseEnter={(e) => { if (document.activeElement !== e.currentTarget) { e.currentTarget.style.background = '#222222'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)'; } }}
+        onMouseLeave={(e) => { if (document.activeElement !== e.currentTarget) { e.currentTarget.style.background = '#1a1a1a'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; } }}
+        onFocus={(e) => { e.currentTarget.style.background = '#1a1a1a'; e.currentTarget.style.borderColor = `${accent}66`; }}
+        onBlur={(e)  => { e.currentTarget.style.background = '#1a1a1a'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
       />
 
       {/* Duration label */}
@@ -129,14 +132,16 @@ export default function TaskDeclaration({ onStart, onOpenSettings, accent }: Pro
             <button
               key={d}
               onClick={() => selectPreset(d)}
+              onMouseEnter={() => setHoveredDuration(d)}
+              onMouseLeave={() => setHoveredDuration(null)}
               style={{
                 flex: 1,
-                background: sel ? `${accent}1e` : '#1a1a1a',
-                border: `0.5px solid ${sel ? `${accent}80` : 'rgba(255,255,255,0.08)'}`,
+                background: sel ? `${accent}1e` : hoveredDuration === d ? `${accent}0f` : '#1a1a1a',
+                border: `0.5px solid ${sel ? `${accent}80` : hoveredDuration === d ? `${accent}40` : 'rgba(255,255,255,0.08)'}`,
                 borderRadius: 6,
                 padding: '8px 0',
                 fontSize: 12,
-                color: sel ? accent : '#a3a3a3',
+                color: sel ? accent : hoveredDuration === d ? accent : '#a3a3a3',
                 fontFamily: 'inherit',
                 cursor: 'pointer',
                 transition: 'all 0.15s',
@@ -152,14 +157,16 @@ export default function TaskDeclaration({ onStart, onOpenSettings, accent }: Pro
       <div
         style={{
           position: 'relative',
-          background: isCustom ? `${accent}1e` : '#1a1a1a',
-          border: `0.5px solid ${isCustom ? `${accent}80` : 'rgba(255,255,255,0.08)'}`,
+          background: isCustom ? `${accent}1e` : hoveredDuration === -1 ? `${accent}0f` : '#1a1a1a',
+          border: `0.5px solid ${isCustom ? `${accent}80` : hoveredDuration === -1 ? `${accent}40` : 'rgba(255,255,255,0.08)'}`,
           borderRadius: 6,
           padding: '8px 0',
           cursor: 'text',
           transition: 'all 0.15s',
           textAlign: 'center',
         }}
+        onMouseEnter={() => setHoveredDuration(-1)}
+        onMouseLeave={() => setHoveredDuration(null)}
         onClick={() => { setIsCustom(true); customInputRef.current?.focus(); }}
       >
         {/* Display layer */}
@@ -168,7 +175,7 @@ export default function TaskDeclaration({ onStart, onOpenSettings, accent }: Pro
           fontFamily: customValue ? "'JetBrains Mono', monospace" : 'inherit',
           color: customValue
             ? (customValid ? accent : '#f87171')
-            : isCustom ? '#737373' : '#a3a3a3',
+            : isCustom ? '#737373' : hoveredDuration === -1 ? accent : '#a3a3a3',
           pointerEvents: 'none',
           letterSpacing: customValue ? '0.02em' : undefined,
         }}>
