@@ -51,7 +51,7 @@ interface TrailNode {
 
 // ── Ghost Trail ───────────────────────────────────────────────────────────────
 
-function GhostTrail({ nodes }: { nodes: TrailNode[] }) {
+function GhostTrail({ nodes, accent }: { nodes: TrailNode[]; accent: string }) {
   if (!nodes || nodes.length === 0) return null;
 
   const W = 348;
@@ -76,15 +76,15 @@ function GhostTrail({ nodes }: { nodes: TrailNode[] }) {
 
   return (
     <div style={{
-      background: 'linear-gradient(180deg, rgba(93,216,230,0.04) 0%, rgba(255,255,255,0.015) 100%)',
-      border: '0.5px solid rgba(93,216,230,0.15)',
+      background: `linear-gradient(180deg, ${accent}0a 0%, rgba(255,255,255,0.015) 100%)`,
+      border: `0.5px solid ${accent}26`,
       borderRadius: 8,
       padding: '11px 12px 12px',
       position: 'relative',
       overflow: 'hidden',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-        <div style={{ fontSize: 9, color: '#5dd8e6', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600 }}>
+        <div style={{ fontSize: 9, color: accent, textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600 }}>
           ghost trail
         </div>
         <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="#525252" strokeWidth={2}>
@@ -120,7 +120,7 @@ function GhostTrail({ nodes }: { nodes: TrailNode[] }) {
             strokeWidth={1.5}
             fill="none"
             strokeLinecap="round"
-            style={{ filter: 'drop-shadow(0 0 4px rgba(93,216,230,0.4))' }}
+            style={{ filter: `drop-shadow(0 0 4px ${accent}66)` }}
           />
         </svg>
 
@@ -130,9 +130,9 @@ function GhostTrail({ nodes }: { nodes: TrailNode[] }) {
           left: `calc(${ghostXFrac * 100}% - 7px)`,
           top: cy - 30,
           opacity: 0.85,
-          filter: 'drop-shadow(0 0 6px rgba(93,216,230,0.5))',
+          filter: `drop-shadow(0 0 6px ${accent}80)`,
         }}>
-          <GhostMascot state={driftIdx === -1 ? 'calm' : 'concerned'} size={14} />
+          <GhostMascot state={driftIdx === -1 ? 'calm' : 'concerned'} size={14} tint={accent} />
         </div>
 
         {/* App nodes */}
@@ -142,10 +142,10 @@ function GhostTrail({ nodes }: { nodes: TrailNode[] }) {
           const cat = n.category ?? 'inactive';
           const ring = cat === 'distraction' ? '#f87171'
                      : cat === 'research'    ? '#60a5fa'
-                     : cat === 'focus'       ? '#5dd8e6'
+                     : cat === 'focus'       ? accent
                      : '#525252';
           const tagColor = cat === 'distraction' ? '#f87171'
-                         : (cat === 'focus' && i === nodes.length - 1) ? '#5dd8e6'
+                         : (cat === 'focus' && i === nodes.length - 1) ? accent
                          : '#737373';
           return (
             <div key={i} style={{
@@ -217,11 +217,11 @@ export default function SessionRecap({ recap, onNewSession, onOpenSettings, acce
   const earlyEnd   = totalSec < plannedSec - 5;
 
   const metrics = [
-    { label: 'focus time', value: fmtMin(recap.focusSec),  color: '#2dd4bf' },
+    { label: 'focus time', value: fmtMin(recap.focusSec),  color: accent    },
     { label: 'drift time', value: fmtMin(recap.driftSec),  color: '#f87171' },
-    { label: 'switches',   value: recap.totalSwitches,       color: '#e5e5e5' },
-    { label: 'nudges',     value: recap.nudgesReceived,       color: '#facc15' },
-  ] as const;
+    { label: 'switches',   value: recap.totalSwitches,     color: '#e5e5e5' },
+    { label: 'nudges',     value: recap.nudgesReceived,    color: '#facc15' },
+  ];
 
   // Derive trail nodes from chronological switchLog using the same
   // collapse logic as analyzeTrail in geminiService.ts so visual tags
@@ -256,7 +256,7 @@ export default function SessionRecap({ recap, onNewSession, onOpenSettings, acce
       fontFamily: "'Inter', sans-serif",
       color: '#e5e5e5',
       overflow: 'hidden',
-      background: 'radial-gradient(circle at 50% -10%, rgba(93,216,230,0.07) 0%, transparent 55%), #111',
+      background: `radial-gradient(circle at 50% -10%, ${accent}12 0%, transparent 55%), #111`,
     }}>
       {/* Header */}
       <div style={{
@@ -279,14 +279,14 @@ export default function SessionRecap({ recap, onNewSession, onOpenSettings, acce
             top: d.y, left: d.x,
             width: d.s, height: d.s,
             borderRadius: '50%',
-            background: '#5dd8e6',
+            background: accent,
             opacity: d.o,
-            boxShadow: '0 0 5px rgba(93,216,230,0.6)',
+            boxShadow: `0 0 5px ${accent}99`,
             pointerEvents: 'none',
           }} />
         ))}
 
-        <div style={{ filter: 'drop-shadow(0 0 12px rgba(93,216,230,0.45))', flexShrink: 0 }}>
+        <div style={{ filter: `drop-shadow(0 0 12px ${accent}73)`, flexShrink: 0 }}>
           <GhostMascot state="happy" size={36} tint={accent} />
         </div>
 
@@ -352,23 +352,23 @@ export default function SessionRecap({ recap, onNewSession, onOpenSettings, acce
         </div>
 
         {/* Ghost trail */}
-        <GhostTrail nodes={trailNodes} />
+        <GhostTrail nodes={trailNodes} accent={accent} />
 
         <div style={{ height: 12 }} />
 
         {/* Ghost trail insight */}
         <div style={{
-          background: 'linear-gradient(135deg, rgba(93,216,230,0.06) 0%, rgba(255,255,255,0.02) 100%)',
+          background: `linear-gradient(135deg, ${accent}0f 0%, rgba(255,255,255,0.02) 100%)`,
           backdropFilter: 'blur(8px)',
           opacity: 0.85,
-          border: '0.5px solid rgba(93,216,230,0.18)',
+          border: `0.5px solid ${accent}2e`,
           borderRadius: 8,
           padding: '12px 13px',
           display: 'flex',
           gap: 11,
           alignItems: 'flex-start',
         }}>
-          <div style={{ flexShrink: 0, marginTop: 1, filter: 'drop-shadow(0 0 8px rgba(93,216,230,0.3))' }}>
+          <div style={{ flexShrink: 0, marginTop: 1, filter: `drop-shadow(0 0 8px ${accent}4d)` }}>
             <GhostMascot state="calm" size={26} tint={accent} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -395,18 +395,18 @@ export default function SessionRecap({ recap, onNewSession, onOpenSettings, acce
           onClick={onNewSession}
           style={{
             width: '100%',
-            background: 'linear-gradient(180deg, #5dd8e6 0%, #2dd4bf 100%)',
-            border: '0.5px solid #5dd8e6',
+            background: accent,
+            border: `0.5px solid ${accent}`,
             borderRadius: 6,
             padding: '11px 0',
             fontSize: 11,
             fontWeight: 600,
-            color: '#082025',
+            color: '#0a0a0a',
             fontFamily: 'inherit',
             cursor: 'pointer',
             letterSpacing: '0.04em',
             textTransform: 'uppercase',
-            boxShadow: '0 4px 12px -4px rgba(93,216,230,0.5), inset 0 1px 0 rgba(255,255,255,0.4)',
+            boxShadow: `0 4px 12px -4px ${accent}80, inset 0 1px 0 rgba(255,255,255,0.4)`,
           }}
         >
           start new session
