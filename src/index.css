@@ -49,6 +49,28 @@ input, textarea {
   0%, 100% { transform: translateY(0) rotate(-1deg); }
   50% { transform: translateY(-2px) rotate(1deg); }
 }
+@keyframes angerPulse {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  15%       { transform: scale(1.3) rotate(-10deg); }
+  30%       { transform: scale(1.05) rotate(6deg); }
+  50%       { transform: scale(1.2) rotate(-5deg); }
+  70%       { transform: scale(1.05) rotate(3deg); }
+}
+
+/* Custom duration input cursor */
+@keyframes fgCursorBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* Insight loading shimmer */
+@keyframes insightShimmer {
+  0%, 100% { opacity: 0.35; }
+  50%       { opacity: 0.65; }
+}
+.insight-shimmer {
+  animation: insightShimmer 1.4s ease-in-out infinite;
+}
 
 /* Chat animations */
 @keyframes pulseDot {

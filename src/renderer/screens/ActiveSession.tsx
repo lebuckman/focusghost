@@ -271,7 +271,7 @@ export default function ActiveSession({ task, durationMin, sessionUpdate, onOpen
           onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
           aria-label="open chat"
         >
-          <GhostMascot state={sessionUpdate.ghostState} size={28} tint={accent} />
+          <GhostMascot state={sessionUpdate.ghostState} size={28} tint={accent} category={sessionUpdate.category} />
         </button>
 
         {/* Status dot */}
@@ -528,7 +528,7 @@ export default function ActiveSession({ task, durationMin, sessionUpdate, onOpen
         onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
         aria-label="open chat"
       >
-        <GhostMascot state={sessionUpdate.ghostState} size={40} tint={accent} />
+        <GhostMascot state={sessionUpdate.ghostState} size={40} tint={accent} category={sessionUpdate.category} />
       </button>
     </div>
   );

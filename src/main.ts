@@ -5,9 +5,17 @@ import { app, BrowserWindow, ipcMain, powerMonitor, Menu, shell } from "electron
 import { spawn } from 'child_process';
 import { extractTabTitle } from "./main/get-browser-tab";
 import {
+  classifyActivity,
+  isBrowserApp,
+  extractSiteName,
+  extractTitleKeywords,
+} from "./main/classification/activityClassifier";
+import type { ActivityCategory, SessionCorrection } from "./shared/classificationTypes";
+import {
   showInterruptNudge,
   closeNudgeWindow,
   isNudgeWindowOpen,
+  isNudgeWindowSender,
 } from "./main/nudge-window";
 import path from "path";
 import started from "electron-squirrel-startup";
@@ -27,8 +35,6 @@ import {
   type GhostMascotState,
   type NudgePayload,
   type NudgeType,
-  type GhostMessagePayload,
-  type OpenGhostChatPayload,
 } from "./shared/ipc-contract";
 import {
   initializeAIOrchestrator,
@@ -52,133 +58,21 @@ const deviceId =
     return id;
   })();
 
-// ── App categorizer ──────────────────────────────────────────────────────────
+// ── Category mapping ──────────────────────────────────────────────────────────
 
-const FOCUS_BUNDLES = new Set([
-  // Code editors & IDEs
-  "com.microsoft.VSCode",
-  "com.apple.dt.Xcode",
-  "io.cursor.Cursor",
-  "com.sublimetext.4",
-  "dev.zed.Zed",
-  "com.jetbrains.intellij",
-  "com.jetbrains.webstorm",
-  "com.jetbrains.pycharm",
-  "com.jetbrains.goland",
-  "com.jetbrains.clion",
-  "com.jetbrains.rider",
-  "com.jetbrains.datagrip",
-  "com.jetbrains.rubymine",
-  "com.jetbrains.appcode",
-  "com.todesktop.230313mzl4w4u92", // Windsurf
-  // Terminals
-  "com.apple.Terminal",
-  "com.googlecode.iterm2",
-  "dev.warp.Warp",
-  "com.mitchellh.ghostty",
-  "com.alacritty.Alacritty",
-  // Design
-  "com.figma.Desktop",
-  "com.sketch.sketch",
-  "com.adobe.Photoshop",
-  "com.adobe.illustrator",
-  "com.adobe.InDesign",
-  "com.adobe.Premiere",
-  "com.adobe.AfterEffects",
-  "com.adobe.AdobeXD",
-  // Writing & notes
-  "com.obsidian.md",
-  "md.obsidian",
-  "com.notion.id",
-  "com.apple.Notes",
-  "net.shinyfrog.bear",
-  "com.ulyssesapp.mac",
-  "com.adobe.Reader",
-  "com.readdle.pdf-squeezer-4",
-  // Office & docs
-  "com.microsoft.Word",
-  "com.microsoft.Excel",
-  "com.microsoft.Powerpoint",
-  "com.microsoft.OneNote",
-  "com.apple.iWork.Pages",
-  "com.apple.iWork.Numbers",
-  "com.apple.iWork.Keynote",
-  // Dev tools
-  "com.github.GitHubDesktop",
-  "com.apple.dt.Instruments",
-  "com.postmanlabs.mac",
-  "com.insomnia.app",
-  "io.paw.mac",
-  "com.tableplus.TablePlus",
-  "com.sequelpro.SequelPro",
-  "com.dbeaver.product",
-  "com.tinyapp.TableFlip",
-  "com.docker.docker",
-  "com.virtualbox.app",
-  "com.parallels.desktop",
-  "com.apple.Simulator",
-  // Task / project management
-  "com.culturedcode.ThingsMac",
-  "com.todoist.mac.Todoist",
-  "com.linear.app",
-  "io.linear",
-  // Meetings (treated as focus — active work/class)
-  "us.zoom.xos",
-  "com.microsoft.teams",
-  "com.microsoft.teams2",
-  "com.loom.desktop",
-]);
-
-const FOCUS_NAME_RE =
-  /\b(terminal|iterm|iterm2|ghostty|warp|alacritty|vs code|vscode|cursor|zed|xcode|webstorm|pycharm|intellij|android studio|sublime|obsidian|notion|bear|ulysses|word|excel|powerpoint|keynote|pages|numbers|onenote|figma|sketch|photoshop|illustrator|indesign|premiere|after effects|postman|insomnia|tableplus|sequel pro|dbeaver|docker|simulator|zoom|microsoft teams|loom|things|todoist|linear|github desktop|winsurf|windsurf|raycast)\b/i;
-
-const DISTRACTION_BUNDLES = new Set([
-  "com.hnc.Discord",
-  "com.spotify.client",
-  "com.apple.TV",
-  "com.facebook.archon",
-  "com.apple.Music",
-  "com.whatsapp.WhatsApp",
-  "ph.telegra.Telegraph",
-]);
-
-const DISTRACTION_NAME_RE =
-  /\b(youtube|netflix|twitch|tiktok|instagram|twitter|x\.com|reddit|steam|epicgames|discord|prime video|primevideo|hulu|disney\+|disneyplus|peacock|facebook|snapchat|espn|crunchyroll|soundcloud|bandcamp|9gag|tumblr|pinterest|linkedin)\b/i;
-
-const RESEARCH_BUNDLES = new Set([
-  "com.google.Chrome",
-  "org.mozilla.firefox",
-  "com.apple.Safari",
-  "com.microsoft.edgemac",
-  "com.brave.Browser",
-  "com.operasoftware.Opera",
-  "company.thebrowser.Browser", // Arc
-  "app.zen-browser.zen", // Zen Browser
-  "com.vivaldi.Vivaldi",
-  "com.kagi.kagimacOS", // Orion
-  "com.apple.Preview",
-  "com.readdle.PDFExpert",
-  "com.pdfpen.pdfpen7",
-]);
-
-// Catches any unrecognized browser by app name — stops them falling through to 'unknown'
-const RESEARCH_NAME_RE = /browser|navigator/i;
-
-function categorize(
-  appName: string,
-  bundleId: string,
-  title: string,
-): WindowCategory {
-  if (FOCUS_BUNDLES.has(bundleId)) return "focus";
-  if (DISTRACTION_BUNDLES.has(bundleId)) return "distraction";
-  if (DISTRACTION_NAME_RE.test(appName)) return "distraction";
-  // Title-based check catches YouTube/Reddit/etc open in any browser
-  if (DISTRACTION_NAME_RE.test(title)) return "distraction";
-  if (RESEARCH_BUNDLES.has(bundleId)) return "research";
-  if (FOCUS_NAME_RE.test(appName)) return "focus";
-  // Fallback: any app whose name contains "browser" is research
-  if (RESEARCH_NAME_RE.test(appName)) return "research";
-  return "unknown";
+function mapActivityToWindow(ac: ActivityCategory): WindowCategory {
+  switch (ac) {
+    case 'focus':
+    case 'supportive':
+      return 'focus';
+    case 'distraction':
+    case 'hard-distraction':
+      return 'distraction';
+    case 'neutral':
+    case 'needs-clarification':
+    default:
+      return 'research';
+  }
 }
 
 // ── Session state ─────────────────────────────────────────────────────────────
@@ -205,6 +99,12 @@ interface SessionState {
   distractionHistory: Record<string, number[]>;
   nudgeCooldownUntil: Partial<Record<string, number>>;
   milestonesFired: Set<string>;
+  stuckRollingLog: SwitchEntry[];   // cleared after stuck fires; separate from switchLog
+  idleSoftFired: boolean;           // true after idle-soft fires; reset when user is active
+  focusStreakStart: number | null;  // timestamp when current focus streak began
+  blockedApps: Map<string, number>; // appName → blockedUntil timestamp
+  sessionCorrections: SessionCorrection[]; // user overrides for this session only
+  pendingClarifications: Set<string>;      // keys already asked about ("appName:tabTitle")
 }
 
 let session: SessionState | null = null;
@@ -240,16 +140,29 @@ function deriveGhostState(
 
 // ── Nudge helpers ─────────────────────────────────────────────────────────────
 
+// Demo: cooldowns are short so all nudge types can be triggered back-to-back.
+// Raise to 3/5/5/10/10/10 min for production.
 const NUDGE_COOLDOWNS: Record<string, number> = {
   // demo: short cooldowns for testability — restore to 3/5/5/10/10/10 min for production
-  "in-app": 30 * 1000,
-  "distraction-firm": 60 * 1000,
-  "distraction-hard": 60 * 1000,
-  "stuck-helpful": 90 * 1000,
-  "idle-soft": 90 * 1000,
-  "pattern-observational": 90 * 1000,
+  "in-app": 10 * 1000,
+  "distraction-firm": 15 * 1000,
+  "distraction-hard": 15 * 1000,
+  "stuck-helpful": 20 * 1000,
+  "idle-soft": 20 * 1000,
+  "pattern-observational": 20 * 1000,
   "milestone-positive": Infinity,
+  "clarify": 30 * 1000, // pendingClarifications set prevents re-ask per key; cooldown is a safety net
 };
+
+// DEMO THRESHOLDS — revert to production values after demo
+const DISTRACTION_FIRM_SEC  = 8;    // prod: 120
+const PATTERN_VISIT_COUNT   = 1;    // prod: 2  (fire pattern on 2nd visit)
+const PATTERN_WINDOW_SEC    = 90;   // prod: 600
+const STUCK_SWITCH_COUNT    = 3;    // prod: 6
+const STUCK_WINDOW_SEC      = 45;   // prod: 300
+const STUCK_RECENCY_SEC     = 15;   // prod: 30
+const IDLE_TRIGGER_SEC      = 10;   // same for prod
+const MILESTONE_STREAK_SEC  = 20;   // prod: 25 * 60
 
 function showCheckinNudge(
   win: BrowserWindow | null,
@@ -275,13 +188,14 @@ function sessionContext() {
   return { task: session.task, investedSec, remainingSec };
 }
 
-async function fireNudge(payload: NudgePayload): Promise<boolean> {
+async function fireNudge(payload: NudgePayload, force = false): Promise<boolean> {
   if (!session) return false;
-  const isInterrupt =
-    payload.driftType === "distraction" || payload.driftType === "stuck";
+  const isInterrupt = payload.tier === 2;
   if (!isInterrupt && !mainWindow) return false;
-  // Don't overwrite a nudge that's currently visible — user hasn't dismissed it yet
-  if (isInterrupt && isNudgeWindowOpen()) return false;
+  // Non-force interrupts are blocked if a popup is already visible.
+  // idle-soft (force=true) closes and replaces whatever is showing.
+  if (isInterrupt && !force && isNudgeWindowOpen()) return false;
+
   const now = Date.now();
   const cooldownExpiry = session.nudgeCooldownUntil[payload.type];
   if (cooldownExpiry !== undefined && now < cooldownExpiry) return false;
@@ -301,7 +215,8 @@ async function fireNudge(payload: NudgePayload): Promise<boolean> {
   console.debug('[Nudge] fired', { type: finalPayload.type, driftType: finalPayload.driftType, messageLen: finalPayload.message?.length ?? 0 });
 
   if (isInterrupt) {
-    showInterruptNudge(finalPayload);
+    // Pass force so showInterruptNudge can close an existing popup for idle-soft
+    showInterruptNudge(finalPayload, force);
   } else {
     showCheckinNudge(mainWindow, finalPayload);
   }
@@ -342,8 +257,10 @@ async function checkFrequencyDrift(_now: number) {
 }
 
 async function checkDistractionDrift(
-  appName: string,
+  processName: string,         // OS app name — used for blockedApps lookup
+  distractionKey: string,      // site name for browsers, app name for desktop
   category: WindowCategory,
+  activityCategory: ActivityCategory,
   now: number,
 ) {
   if (!session) return;
@@ -353,65 +270,106 @@ async function checkDistractionDrift(
     return;
   }
 
+  const isHard    = activityCategory === "hard-distraction";
+  const blockedUntil = session.blockedApps.get(distractionKey) ?? session.blockedApps.get(processName);
+  const isBlocked = blockedUntil !== undefined && now < blockedUntil;
+
   if (session.distractionStartTime === null) {
-    session.distractionStartTime = now;
+    // Hard distraction and blocked apps fire quickly — pre-subtract threshold to trigger next tick
+    session.distractionStartTime = (isHard || isBlocked) ? now - DISTRACTION_FIRM_SEC * 1000 : now;
     return;
   }
 
   const consecutiveSec = (now - session.distractionStartTime) / 1000;
-  if (consecutiveSec < 0) return; // defensive
+  if (consecutiveSec < ((isHard || isBlocked) ? 1 : DISTRACTION_FIRM_SEC)) return;
 
-  const windowStart = now - 10 * 60 * 1000;
-  const history = session.distractionHistory[appName] ?? [];
+  const windowStart = now - PATTERN_WINDOW_SEC * 1000;
+  const history = session.distractionHistory[distractionKey] ?? [];
+  const recentOccurrences = history.filter((t) => t >= windowStart).length;
 
-  // Prune old entries and append this occurrence if it's a new distinct occurrence
-  const pruned = history.filter((t) => t >= windowStart);
-  // Only append if the last recorded occurrence was more than 60s ago to avoid spamming
-  const last = pruned.length ? pruned[pruned.length - 1] : 0;
-  if (now - last > 60 * 1000) pruned.push(now);
-  session.distractionHistory[appName] = pruned;
+  // Record occurrence and reset timer — prevents re-fire until threshold elapses again
+  session.distractionHistory[distractionKey] = [...history.filter((t) => t >= windowStart), now];
+  session.distractionStartTime = now;
 
-  const occurrences = pruned.length;
-
-  // If this is a repeated distraction (3+ occurrences in the window) escalate messaging
-  if (occurrences >= 3) {
+  if (isHard) {
     await fireNudge({
-      type: "distraction-firm",
+      type: "distraction-hard",
       tier: 2,
-      message: `third time on ${appName} in 10 minutes. your task is still waiting.`,
+      message: `${distractionKey.toLowerCase()} — eyes on me. back to "${session.task}".`,
       driftType: "distraction",
-      context: {
-        appName,
-        driftDurationSec: Math.round(consecutiveSec),
-        occurrences,
-        ...sessionContext(),
-      },
+      context: { appName: distractionKey, driftDurationSec: Math.round(consecutiveSec), ...sessionContext() },
+    });
+  } else if (recentOccurrences >= PATTERN_VISIT_COUNT) {
+    await fireNudge({
+      type: "pattern-observational",
+      tier: 2,
+      message: `${distractionKey.toLowerCase()} again — want me to block it for the rest of the session?`,
+      driftType: "distraction",
+      context: { appName: distractionKey, driftDurationSec: Math.round(consecutiveSec), occurrences: recentOccurrences + 1, ...sessionContext() },
     });
   } else {
+    const blockMsg = isBlocked && blockedUntil
+      ? `${distractionKey.toLowerCase()} is blocked — back to "${session.task}"?`
+      : `you've been on ${distractionKey.toLowerCase()} for ${Math.round(consecutiveSec)}s. "${session.task}" is still waiting.`;
     await fireNudge({
       type: "distraction-firm",
       tier: 2,
-      message: `you've been on ${appName} for a bit. still working on "${session.task}"?`,
+      message: blockMsg,
       driftType: "distraction",
-      context: {
-        appName,
-        driftDurationSec: Math.round(consecutiveSec),
-        occurrences,
-        ...sessionContext(),
-      },
+      context: { appName: distractionKey, driftDurationSec: Math.round(consecutiveSec), occurrences: 1, blockUntil: blockedUntil, ...sessionContext() },
     });
   }
 }
 
+async function checkClarification(
+  appName: string,
+  bundleId: string,
+  tabTitle: string,
+) {
+  if (!session) return;
+  const clarifyKey = `${appName}:${tabTitle}`;
+  if (session.pendingClarifications.has(clarifyKey)) return;
+  session.pendingClarifications.add(clarifyKey);
+
+  const siteName = extractSiteName(tabTitle);
+  const titleKeywords = extractTitleKeywords(tabTitle, siteName);
+  const displayLabel = siteName ? tabTitle.replace(/\s*[-|]\s*\w[\w\s]*$/i, '').trim() || tabTitle : tabTitle;
+
+  await fireNudge({
+    type: "clarify",
+    tier: 1,
+    message: `looks like it could be related — count it as focus time?`,
+    driftType: "frequency",
+    context: {
+      appName: displayLabel.slice(0, 45),
+      clarificationPayload: {
+        isBrowser: isBrowserApp(appName, bundleId),
+        appName,
+        siteName,
+        titleKeywords,
+      },
+      ...sessionContext(),
+    },
+  });
+}
+
 async function checkStuckDrift(now: number) {
   if (!session) return;
-  const windowStart = now - 5 * 60 * 1000;
-  const recent = session.switchLog.filter((s) => s.timestamp >= windowStart);
-  // Need enough switches to consider this a cycling behavior
-  if (recent.length < 6) return;
 
-  const distractionCount = recent.filter((s) => s.category === "distraction").length;
-  if (distractionCount / recent.length > 0.2) return;
+  // Prune entries older than the rolling window
+  session.stuckRollingLog = session.stuckRollingLog.filter(
+    (s) => s.timestamp >= now - STUCK_WINDOW_SEC * 1000,
+  );
+
+  if (session.stuckRollingLog.length < STUCK_SWITCH_COUNT) return;
+
+  // Most recent switch must be recent — user is actively cycling right now
+  const mostRecent = session.stuckRollingLog[session.stuckRollingLog.length - 1];
+  if (now - mostRecent.timestamp > STUCK_RECENCY_SEC * 1000) return;
+
+  // Fewer than 20% distraction switches — this is a focus/stuck pattern, not distraction drift
+  const distractionCount = session.stuckRollingLog.filter((s) => s.category === "distraction").length;
+  if (distractionCount / session.stuckRollingLog.length >= 0.2) return;
 
   // Build a compact sequence of categories (remove consecutive duplicates)
   const seq: WindowCategory[] = [];
@@ -435,53 +393,62 @@ async function checkStuckDrift(now: number) {
   const fired = await fireNudge({
     type: "stuck-helpful",
     tier: 2,
-    message: `you've been cycling apps a lot — what's snagging you?`,
+    message: `you've been cycling apps — what's snagging you?`,
     driftType: "stuck",
+    context: { ...sessionContext() },
   });
 
-  // Only open ghost chat once per cooldown — not on every 2s tick
-  if (fired) {
-    mainWindow?.webContents.send(IPC.OPEN_GHOST_CHAT, {
-      trigger: "stuck",
-    } as OpenGhostChatPayload);
-    const ghostMsg: GhostMessagePayload = {
-      message: `noticed you've been cycling between apps — what's blocking you on "${session.task}"?`,
-      trigger: "stuck_drift",
-      timestamp: now,
-    };
-    mainWindow?.webContents.send(IPC.GHOST_MESSAGE, ghostMsg);
-    session.chatHistory.push({
-      role: "ghost",
-      content: ghostMsg.message,
-      timestamp: now,
-    });
-  }
+  // Clear the log after firing so stuck can't re-fire on the same switch burst
+  if (fired) session.stuckRollingLog = [];
 }
 
 async function checkInactivity(_now: number) {
   if (!session) return;
   const idleSec = powerMonitor.getSystemIdleTime();
-  if (idleSec >= settings.inactivityThreshold) {
+
+  // Reset flag as soon as the user is active again
+  if (idleSec < 5) {
+    session.idleSoftFired = false;
+    return;
+  }
+
+  // Fire once per idle stretch; force-replaces any existing popup
+  if (idleSec >= IDLE_TRIGGER_SEC && !session.idleSoftFired) {
+    session.idleSoftFired = true;
     await fireNudge({
       type: "idle-soft",
       tier: 2,
-      message: `still there? no activity for ${Math.round(idleSec / 60)} minutes.`,
+      message: `still there? you've been away for ${Math.round(idleSec)}s.`,
       driftType: "distraction",
-    });
+      context: { ...sessionContext() },
+    }, true /* force — idle overrides any existing popup */);
   }
 }
 
 async function checkMilestone(now: number) {
   if (!session) return;
   if (session.milestonesFired.has("25min")) return;
-  if (session.lastCategory !== "focus") return;
-  if (now - session.lastSwitchTime >= 25 * 60 * 1000) {
+
+  if (session.lastCategory !== "focus") {
+    // Reset streak whenever the user leaves a focus app
+    session.focusStreakStart = null;
+    return;
+  }
+
+  // Start the streak timer on first focus tick
+  if (session.focusStreakStart === null) {
+    session.focusStreakStart = now;
+    return;
+  }
+
+  if (now - session.focusStreakStart >= MILESTONE_STREAK_SEC * 1000) {
     session.milestonesFired.add("25min");
     await fireNudge({
       type: "milestone-positive",
       tier: 2,
-      message: `25 minutes of deep focus — that's your best streak. keep it going.`,
+      message: `${MILESTONE_STREAK_SEC}s of continuous focus — solid work. keep it going.`,
       driftType: "frequency",
+      context: { ...sessionContext() },
     });
   }
 }
@@ -543,8 +510,25 @@ async function pollActiveWindow() {
     const title = win.title ?? "";
     const displayName = extractTabTitle(title, appName);
 
-    const trueCategory = categorize(appName, bundleId, title);
+    // Classify using session-aware classifier
+    const tabTitle = displayName !== appName ? displayName : title;
+    const classification = classifyActivity({
+      sessionGoal: session.task,
+      appName,
+      bundleId,
+      windowTitle: title,
+      tabTitle,
+      sessionCorrections: session.sessionCorrections,
+    });
+    const activityCategory = classification.category;
+    const trueCategory = mapActivityToWindow(activityCategory);
     let category = trueCategory;
+
+    // Distraction tracking key: site name for browsers, app name for desktop apps
+    const isCurrentlyBrowser = isBrowserApp(appName, bundleId);
+    const distractionKey = isCurrentlyBrowser
+      ? (extractSiteName(tabTitle) ?? tabTitle.slice(0, 50))
+      : appName;
 
     // For browsers: use extracted tab title; for everything else (Discord, etc.): use raw OS title.
     // This lets us detect both browser tab switches and Discord channel switches via one comparison.
@@ -554,7 +538,7 @@ async function pollActiveWindow() {
     const titleChanged =
       !appChanged &&
       comparisonName !== session.lastDisplayName &&
-      category !== "focus" && // ignore VSCode/editor file switches
+      category !== "focus" && // ignore focus-app file switches
       comparisonName.length >= 3; // ignore empty/loading states
 
     // Always advance the tracking name so the next tick compares against the latest value
@@ -567,6 +551,7 @@ async function pollActiveWindow() {
         titleSettleTimer = null;
       }
       session.switchLog.push({ app: appName, category, timestamp: now, title });
+      session.stuckRollingLog.push({ app: appName, category, timestamp: now });
       session.switchCount += 1;
       session.lastApp = appName;
       session.lastCategory = category;
@@ -589,6 +574,7 @@ async function pollActiveWindow() {
           timestamp: t,
           title: capturedTitle,
         });
+        session.stuckRollingLog.push({ app: capturedApp, category: capturedCategory, timestamp: t });
         session.switchCount += 1;
         session.lastAppChangeTime = t;
         session.lastSwitchTime = t;
@@ -626,7 +612,10 @@ async function pollActiveWindow() {
 
     if (settings.nudgeEnabled) {
       await checkFrequencyDrift(now);
-      await checkDistractionDrift(appName, trueCategory, now);
+      await checkDistractionDrift(appName, distractionKey, trueCategory, activityCategory, now);
+      if (activityCategory === "needs-clarification") {
+        await checkClarification(appName, bundleId, tabTitle);
+      }
       await checkStuckDrift(now);
       await checkInactivity(now);
       await checkMilestone(now);
@@ -695,14 +684,7 @@ function buildRecap(currentSession: SessionState): SessionRecapPayload {
     currentSession.focusSec + currentSession.driftSec,
   );
   const focusPct = Math.round((currentSession.focusSec / totalSec) * 100);
-  let insight: string;
-  if (focusPct >= 80) {
-    insight = `Strong session - you stayed focused ${focusPct}% of the time on "${currentSession.task}". Keep that streak going.`;
-  } else if (focusPct >= 60) {
-    insight = `Decent focus at ${focusPct}% on "${currentSession.task}". A few drifts but you pulled back. Try closing distracting tabs before the next session.`;
-  } else {
-    insight = `Tough one - only ${focusPct}% focus time. Identify what pulled you away from "${currentSession.task}" and eliminate it before the next session.`;
-  }
+  
 
   return {
     task: currentSession.task,
@@ -713,7 +695,7 @@ function buildRecap(currentSession: SessionState): SessionRecapPayload {
     nudgesReceived: currentSession.nudgeLog.length,
     nudgesDismissedAsBreak: 0,
     appBreakdown,
-    insight,
+    insight: "",
     switchLog: currentSession.switchLog,
   };
 }
@@ -775,6 +757,12 @@ function registerIPC() {
       distractionHistory: {},
       nudgeCooldownUntil: {},
       milestonesFired: new Set(),
+      stuckRollingLog: [],
+      idleSoftFired: false,
+      focusStreakStart: null,
+      blockedApps: new Map(),
+      sessionCorrections: [],
+      pendingClarifications: new Set(),
     };
     store.set("currentSession", {
       task: session.task,
@@ -828,9 +816,8 @@ function registerIPC() {
     },
   );
 
-  ipcMain.handle(IPC.DISMISS_NUDGE, () => {
-    void stopNudgeSpeech();
-    if (isNudgeWindowOpen()) {
+  ipcMain.handle(IPC.DISMISS_NUDGE, (event) => {
+    if (isNudgeWindowSender(event.sender)) {
       closeNudgeWindow();
     } else {
       restoreMainWindow(mainWindow);
@@ -847,8 +834,40 @@ function registerIPC() {
 
   ipcMain.handle(IPC.GET_SETTINGS, () => ({ ...settings }));
 
+  ipcMain.handle(IPC.REQUEST_GHOST_CHAT, (_e, reason?: string) => {
+    mainWindow?.webContents.send(IPC.OPEN_GHOST_CHAT, { trigger: 'stuck', prefillMessage: reason });
+  });
+
+  ipcMain.handle(IPC.SNOOZE_NUDGE, (_e, appName?: string) => {
+    if (!session) return;
+    const snoozeUntil = Date.now() + 60 * 1000;
+    // Extend distraction cooldowns so neither distraction-firm nor pattern fires for 60s
+    session.nudgeCooldownUntil['distraction-firm']      = Math.max(session.nudgeCooldownUntil['distraction-firm']      ?? 0, snoozeUntil);
+    session.nudgeCooldownUntil['pattern-observational'] = Math.max(session.nudgeCooldownUntil['pattern-observational'] ?? 0, snoozeUntil);
+    // Reset entry timer so the 8s window starts fresh after the snooze expires
+    if (appName) session.distractionStartTime = null;
+  });
+
+  ipcMain.handle(IPC.BLOCK_APP, (_e, appName: string, until: number) => {
+    if (!session) return;
+    session.blockedApps.set(appName, until);
+    // Reset distraction timer so the 1s threshold fires immediately on next visit
+    session.distractionStartTime = null;
+  });
+
   ipcMain.handle(IPC.SET_WINDOW_DIM, (_e, dimmed: boolean) => {
     mainWindow?.setOpacity(dimmed ? 0.8 : 1.0);
+  });
+
+  ipcMain.handle(IPC.CLASSIFY_CORRECTION, (_e, payload: SessionCorrection) => {
+    if (!session) return;
+    // Remove any conflicting correction for the same app/site before inserting
+    session.sessionCorrections = session.sessionCorrections.filter(c => {
+      if (!payload.isBrowser && !c.isBrowser) return c.appName !== payload.appName;
+      if (payload.isBrowser && c.isBrowser)   return c.siteName !== payload.siteName;
+      return true;
+    });
+    session.sessionCorrections.push(payload);
   });
 
   // DEBUG: Person 3 can call window.electronAPI.debugNudge('distraction-firm') from DevTools
@@ -922,6 +941,17 @@ function registerIPC() {
         driftType: "frequency",
         context: { ...sessionContext() },
       },
+      "clarify": {
+        type: "clarify",
+        tier: 1,
+        message: "looks like it could be related — count it as focus time?",
+        driftType: "frequency",
+        context: {
+          appName: "YouTube tutorial",
+          clarificationPayload: { isBrowser: true, siteName: "youtube", titleKeywords: ["tutorial"] },
+          ...sessionContext(),
+        },
+      },
     };
     const payload = fallbacks[type] ?? fallbacks["in-app"];
 
@@ -973,9 +1003,9 @@ const createWindow = () => {
     width: 380,
     height: 620,
     alwaysOnTop: true,
-    frame: process.platform === 'darwin',
-    titleBarStyle: process.platform === 'darwin' ? 'hidden' : undefined,
-    trafficLightPosition: process.platform === 'darwin' ? { x: 10, y: 11 } : undefined,
+    frame: process.platform === "darwin",
+    titleBarStyle: process.platform === "darwin" ? "hidden" : undefined,
+    trafficLightPosition: process.platform === "darwin" ? { x: 10, y: 11 } : undefined,
     resizable: true,
     movable: true,
     webPreferences: {

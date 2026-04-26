@@ -4,22 +4,26 @@
  */
 
 export const IPC = {
-  START_SESSION:   'START_SESSION',
-  END_SESSION:     'END_SESSION',
-  CHAT_MESSAGE:    'CHAT_MESSAGE',
-  DISMISS_NUDGE:   'DISMISS_NUDGE',
-  NUDGE_ACTION:    'NUDGE_ACTION',
-  UPDATE_SETTINGS: 'UPDATE_SETTINGS',
-  SESSION_UPDATE:  'SESSION_UPDATE',
-  TRIGGER_NUDGE:   'TRIGGER_NUDGE',
-  OPEN_GHOST_CHAT: 'OPEN_GHOST_CHAT',
-  GHOST_MESSAGE:   'GHOST_MESSAGE',
-  CHAT_RESPONSE:   'CHAT_RESPONSE',
-  SESSION_RECAP:   'SESSION_RECAP',
-  DEBUG_NUDGE:     'DEBUG_NUDGE',
-  NUDGE_DISMISSED: 'NUDGE_DISMISSED',
-  GET_SETTINGS:    'GET_SETTINGS',
-  SET_WINDOW_DIM:  'SET_WINDOW_DIM',
+  START_SESSION: "START_SESSION",
+  END_SESSION: "END_SESSION",
+  CHAT_MESSAGE: "CHAT_MESSAGE",
+  DISMISS_NUDGE: "DISMISS_NUDGE",
+  NUDGE_ACTION: "NUDGE_ACTION",
+  UPDATE_SETTINGS: "UPDATE_SETTINGS",
+  SESSION_UPDATE: "SESSION_UPDATE",
+  TRIGGER_NUDGE: "TRIGGER_NUDGE",
+  OPEN_GHOST_CHAT: "OPEN_GHOST_CHAT",
+  GHOST_MESSAGE: "GHOST_MESSAGE",
+  CHAT_RESPONSE: "CHAT_RESPONSE",
+  SESSION_RECAP: "SESSION_RECAP",
+  DEBUG_NUDGE: "DEBUG_NUDGE",
+  NUDGE_DISMISSED: "NUDGE_DISMISSED",
+  GET_SETTINGS: "GET_SETTINGS",
+  SET_WINDOW_DIM: "SET_WINDOW_DIM",
+  REQUEST_GHOST_CHAT: "REQUEST_GHOST_CHAT",
+  SNOOZE_NUDGE: "SNOOZE_NUDGE",
+  BLOCK_APP: "BLOCK_APP",
+  CLASSIFY_CORRECTION: "CLASSIFY_CORRECTION",
 } as const;
 
 export type IPCChannel = (typeof IPC)[keyof typeof IPC];
@@ -38,7 +42,8 @@ export type NudgeType =
   | "idle-soft"
   | "pattern-observational"
   | "milestone-positive"
-  | "in-app";
+  | "in-app"
+  | "clarify";
 export type GhostMascotState =
   | "calm"
   | "concerned"
@@ -110,10 +115,17 @@ export interface NudgePayload {
     occurrences?: number;
     streakDays?: number;
     blockUntil?: number;
+    clarificationPayload?: {
+      isBrowser: boolean;
+      appName?: string;
+      siteName?: string;
+      titleKeywords: string[];
+    };
   };
 }
 export interface OpenGhostChatPayload {
   trigger: DriftType;
+  prefillMessage?: string;
 }
 export interface GhostMessagePayload {
   message: string;
@@ -184,7 +196,7 @@ export interface AppStore {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   driftThreshold: 7,
-  inactivityThreshold: 30, // demo: 1m30s — raise to 300 (5min) for production
+  inactivityThreshold: 10, // demo: 10s — raise to 300 (5min) for production
   nudgeEnabled: true,
   voiceEnabled: true,
   personality: 'supportive',

@@ -10,6 +10,8 @@ interface Props {
   onDismiss: () => void;
   onStuck: (reason?: string) => void;
   onEndSession: () => void;
+  onSnooze?: () => void;
+  onBlock?: () => void;
   accent?: string;
 }
 
@@ -62,7 +64,7 @@ function Btn({ primary, accent = '#5dd8e6', onClick, children, style }: {
 
 // ── Popup variants ────────────────────────────────────────────────────────────
 
-function DistractionFirm({ nudge, task, remainingSec, onDismiss, onStuck, accent }: Props) {
+function DistractionFirm({ nudge, task, remainingSec, onDismiss, onStuck, onSnooze, accent }: Props) {
   const appName = nudge.context?.appName ?? 'that app';
   const taskLabel = task || nudge.context?.task || 'your task';
   const driftSec = nudge.context?.driftDurationSec ?? 0;
@@ -112,7 +114,7 @@ function DistractionFirm({ nudge, task, remainingSec, onDismiss, onStuck, accent
         </div>
 
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <Btn onClick={onDismiss}>1 more min</Btn>
+          <Btn onClick={onSnooze ?? onDismiss}>1 more min</Btn>
           <Btn onClick={onStuck}>i'm stuck</Btn>
           <Btn primary accent="#5dd8e6" onClick={onDismiss}>back to work</Btn>
         </div>
@@ -272,7 +274,38 @@ function MilestonePositive({ nudge, onDismiss, accent }: Props) {
   );
 }
 
-function PatternObservational({ nudge, onDismiss, accent }: Props) {
+function Clarify({ nudge, onDismiss }: Props) {
+  const payload = nudge.context?.clarificationPayload;
+  const label = nudge.context?.appName ?? 'this page';
+
+  const markAs = (category: 'focus' | 'distraction') => {
+    if (payload) {
+      void window.electronAPI.classifyCorrection({ ...payload, category });
+    }
+    onDismiss();
+  };
+
+  return (
+    <PopupShell accent="#60a5fa">
+      <div style={{ padding: '28px 24px 24px' }}>
+        <div style={{ fontSize: 11, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 8 }}>quick check</div>
+        <div style={{ fontSize: 20, color: '#ffffff', fontWeight: 700, letterSpacing: '-0.01em', marginBottom: 8 }}>
+          is this part of your session?
+        </div>
+        <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, marginBottom: 20 }}>
+          <span style={{ color: '#e5e5e5', fontWeight: 500 }}>{label}</span> — {nudge.message}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Btn primary accent="#2dd4bf" onClick={() => markAs('focus')}>yes, count as focus</Btn>
+          <Btn onClick={() => markAs('distraction')}>no, it's a distraction</Btn>
+          <Btn onClick={onDismiss}>not now</Btn>
+        </div>
+      </div>
+    </PopupShell>
+  );
+}
+
+function PatternObservational({ nudge, onDismiss, onBlock, accent }: Props) {
   const appName = nudge.context?.appName ?? 'that app';
   const occurrences = nudge.context?.occurrences ?? 3;
 
@@ -313,7 +346,7 @@ function PatternObservational({ nudge, onDismiss, accent }: Props) {
 
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <Btn onClick={onDismiss}>just notice it</Btn>
-          <Btn primary accent="#60a5fa" onClick={onDismiss}>
+          <Btn primary accent="#60a5fa" onClick={onBlock ?? onDismiss}>
             block until {new Date(Date.now() + 30 * 60 * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
           </Btn>
         </div>
@@ -326,12 +359,13 @@ function PatternObservational({ nudge, onDismiss, accent }: Props) {
 
 export function NudgeContent(props: Props) {
   switch (props.nudge.type) {
-    case 'distraction-firm':      return <DistractionFirm {...props} />;
-    case 'distraction-hard':      return <DistractionHard {...props} />;
-    case 'stuck-helpful':         return <StuckHelpful {...props} />;
-    case 'idle-soft':             return <IdleSoft {...props} />;
-    case 'milestone-positive':    return <MilestonePositive {...props} />;
+    case 'distraction-firm':      return <DistractionFirm      {...props} />;
+    case 'distraction-hard':      return <DistractionHard      {...props} />;
+    case 'stuck-helpful':         return <StuckHelpful         {...props} />;
+    case 'idle-soft':             return <IdleSoft             {...props} />;
+    case 'milestone-positive':    return <MilestonePositive    {...props} />;
     case 'pattern-observational': return <PatternObservational {...props} />;
+    case 'clarify':              return <Clarify               {...props} />;
     case 'in-app':
       console.warn('[NudgePopup] in-app nudge rendered as popup — should be inline only', props.nudge);
       return (

@@ -23,8 +23,24 @@ export default function NudgeView() {
   }, []);
 
   const dismiss    = () => window.electronAPI.dismissNudge();
-  const stuck      = () => window.electronAPI.dismissNudge();
+  const stuck      = (reason?: string) => {
+    window.electronAPI.dismissNudge();
+    // "i'm fine" just closes the popup with no chat
+    if (reason === "i'm fine") return;
+    // 'chat_with_ghost' opens chat without a prefill; chip text becomes the first user message
+    window.electronAPI.requestGhostChat(reason !== 'chat_with_ghost' ? reason : undefined);
+  };
   const endSession = () => { window.electronAPI.dismissNudge(); window.electronAPI.endSession(); };
+  const snooze     = () => {
+    window.electronAPI.dismissNudge();
+    window.electronAPI.snoozeNudge(nudge?.context?.appName);
+  };
+  const block      = () => {
+    window.electronAPI.dismissNudge();
+    if (nudge?.context?.appName) {
+      window.electronAPI.blockApp(nudge.context.appName, Date.now() + 30 * 60 * 1000);
+    }
+  };
 
   return (
     <div style={{
@@ -45,6 +61,8 @@ export default function NudgeView() {
           onDismiss={dismiss}
           onStuck={stuck}
           onEndSession={endSession}
+          onSnooze={snooze}
+          onBlock={block}
           accent={accent}
         />
       ) : (

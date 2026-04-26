@@ -9,21 +9,47 @@ interface Props {
 }
 
 const DURATIONS = [15, 30, 45, 60] as const;
+const MIN_CUSTOM = 1;
+const MAX_CUSTOM = 480;
 
 export default function TaskDeclaration({ onStart, onOpenSettings, accent }: Props) {
-  const [task, setTask] = useState('');
-  const [duration, setDuration] = useState<number>(30);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [task,            setTask]           = useState('');
+  const [duration,        setDuration]       = useState<number>(30);
+  const [hoveredDuration, setHoveredDuration] = useState<number | null>(null);
+  const [isCustom,        setIsCustom]        = useState(false);
+  const [taskFocused,   setTaskFocused]   = useState(false);
+  const [customFocused, setCustomFocused] = useState(false);
+  const [customValue,   setCustomValue]   = useState('');
+  const inputRef       = useRef<HTMLInputElement>(null);
+  const customInputRef = useRef<HTMLInputElement>(null);
 
-  const canStart = task.trim().length > 0;
+  const customMin   = parseInt(customValue, 10);
+  const customValid = !isNaN(customMin) && customMin >= MIN_CUSTOM && customMin <= MAX_CUSTOM;
+
+  const activeDuration = isCustom ? (customValid ? customMin : null) : duration;
+  const canStart = task.trim().length > 0 && activeDuration !== null;
+
+  const selectPreset = (d: number) => {
+    setDuration(d);
+    setIsCustom(false);
+    setCustomValue('');
+  };
 
   const handleStart = () => {
     if (!canStart) return;
-    window.electronAPI.startSession({ task: task.trim(), durationMin: duration });
-    onStart(task.trim(), duration);
+    window.electronAPI.startSession({ task: task.trim(), durationMin: activeDuration! });
+    onStart(task.trim(), activeDuration!);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') handleStart();
+  };
+
+  const handleCustomKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // only allow digits, backspace, delete, arrows
+    if (!/[\d]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter'].includes(e.key)) {
+      e.preventDefault();
+    }
     if (e.key === 'Enter') handleStart();
   };
 
@@ -77,7 +103,7 @@ export default function TaskDeclaration({ onStart, onOpenSettings, accent }: Pro
         style={{
           width: '100%',
           background: '#1a1a1a',
-          border: '0.5px solid rgba(255,255,255,0.08)',
+          border: `0.5px solid ${taskFocused ? `${accent}66` : 'rgba(255,255,255,0.08)'}`,
           borderRadius: 6,
           padding: '10px 12px',
           fontSize: 13,
@@ -88,8 +114,10 @@ export default function TaskDeclaration({ onStart, onOpenSettings, accent }: Pro
           boxSizing: 'border-box',
           transition: 'border-color 0.15s',
         }}
-        onFocus={(e) => { e.currentTarget.style.borderColor = `${accent}66`; }}
-        onBlur={(e)  => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+        onMouseEnter={(e) => { if (document.activeElement !== e.currentTarget) { e.currentTarget.style.background = '#222222'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)'; } }}
+        onMouseLeave={(e) => { if (document.activeElement !== e.currentTarget) { e.currentTarget.style.background = '#1a1a1a'; e.currentTarget.style.borderColor = taskFocused ? `${accent}66` : 'rgba(255,255,255,0.08)'; } }}
+        onFocus={() => setTaskFocused(true)}
+        onBlur={() => setTaskFocused(false)}
       />
 
       {/* Duration label */}
@@ -97,28 +125,98 @@ export default function TaskDeclaration({ onStart, onOpenSettings, accent }: Pro
         duration
       </div>
 
-      {/* Duration pills */}
-      <div style={{ display: 'flex', gap: 6 }}>
-        {DURATIONS.map((d) => (
-          <button
-            key={d}
-            onClick={() => setDuration(d)}
-            style={{
-              flex: 1,
-              background: duration === d ? `${accent}1e` : '#1a1a1a',
-              border: `0.5px solid ${duration === d ? `${accent}80` : 'rgba(255,255,255,0.08)'}`,
-              borderRadius: 6,
-              padding: '8px 0',
-              fontSize: 12,
-              color: duration === d ? accent : '#a3a3a3',
-              fontFamily: 'inherit',
-              cursor: 'pointer',
-              transition: 'all 0.15s',
-            }}
-          >
-            {d}m
-          </button>
-        ))}
+      {/* Preset duration pills */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+        {DURATIONS.map((d) => {
+          const sel = !isCustom && duration === d;
+          return (
+            <button
+              key={d}
+              onClick={() => selectPreset(d)}
+              onMouseEnter={() => setHoveredDuration(d)}
+              onMouseLeave={() => setHoveredDuration(null)}
+              style={{
+                flex: 1,
+                background: sel ? `${accent}1e` : hoveredDuration === d ? `${accent}0f` : '#1a1a1a',
+                border: `0.5px solid ${sel ? `${accent}80` : hoveredDuration === d ? `${accent}40` : 'rgba(255,255,255,0.08)'}`,
+                borderRadius: 6,
+                padding: '8px 0',
+                fontSize: 12,
+                color: sel ? accent : hoveredDuration === d ? accent : '#a3a3a3',
+                fontFamily: 'inherit',
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}
+            >
+              {d}m
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Custom pill — full width, inline editable */}
+      <div
+        style={{
+          position: 'relative',
+          background: isCustom ? `${accent}1e` : hoveredDuration === -1 ? `${accent}0f` : '#1a1a1a',
+          border: `0.5px solid ${isCustom ? `${accent}80` : hoveredDuration === -1 ? `${accent}40` : 'rgba(255,255,255,0.08)'}`,
+          borderRadius: 6,
+          padding: '8px 0',
+          cursor: 'text',
+          transition: 'all 0.15s',
+          textAlign: 'center',
+        }}
+        onMouseEnter={() => setHoveredDuration(-1)}
+        onMouseLeave={() => setHoveredDuration(null)}
+        onClick={() => { setIsCustom(true); customInputRef.current?.focus(); }}
+      >
+        {/* Display layer */}
+        <span style={{
+          fontSize: 12,
+          fontFamily: customValue ? "'JetBrains Mono', monospace" : 'inherit',
+          color: customValue
+            ? (customValid ? accent : '#f87171')
+            : isCustom ? '#737373' : hoveredDuration === -1 ? accent : '#a3a3a3',
+          pointerEvents: 'none',
+          letterSpacing: customValue ? '0.02em' : undefined,
+        }}>
+          {!customValue && !customFocused && 'custom'}
+          {customValue && customValue}
+          {customFocused && (
+            <span style={{
+              display: 'inline-block',
+              width: 1,
+              height: '0.9em',
+              background: customValid ? accent : customValue ? '#f87171' : '#737373',
+              marginLeft: customValue ? 1 : 0,
+              marginRight: customValue ? 1 : 0,
+              verticalAlign: 'middle',
+              animation: 'fgCursorBlink 1s step-end infinite',
+            }} />
+          )}
+          {customValue && ' min'}
+        </span>
+
+        {/* Invisible input that captures keystrokes */}
+        <input
+          ref={customInputRef}
+          type="text"
+          inputMode="numeric"
+          value={customValue}
+          onChange={e => {
+            const raw = e.target.value.replace(/\D/g, '').slice(0, 3);
+            setCustomValue(raw);
+          }}
+          onKeyDown={handleCustomKey}
+          onFocus={() => { setIsCustom(true); setCustomFocused(true); }}
+          onBlur={() => setCustomFocused(false)}
+          style={{
+            position: 'absolute', top: 0, left: 0,
+            width: '100%', height: '100%',
+            opacity: 0, cursor: 'text',
+            border: 'none', background: 'transparent',
+          }}
+        />
       </div>
 
       {/* Spacer */}

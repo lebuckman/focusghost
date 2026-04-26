@@ -184,6 +184,15 @@ export default function Settings({ settings, onBack, onChange }: Props) {
             })}
           </div>
         </div>
+        
+        {/* Nudges enabled */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 12, color: '#e5e5e5' }}>nudges</div>
+            <div style={{ fontSize: 10, color: '#737373', marginTop: 2 }}>ghost speaks up when it detects distraction or drift</div>
+          </div>
+          <Toggle on={settings.nudgeEnabled} onChange={v => onChange({ nudgeEnabled: v })} accent={accent} />
+        </div>
 
         {/* Drift threshold */}
         <div style={{ marginBottom: 18 }}>
@@ -199,6 +208,22 @@ export default function Settings({ settings, onBack, onChange }: Props) {
             style={{ width: '100%', accentColor: accent, cursor: 'pointer' }}
           />
         </div>
+        
+        {/* Inactivity timeout */}
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+            <div style={{ fontSize: 12, color: '#e5e5e5' }}>inactivity timeout</div>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: accent, fontVariantNumeric: 'tabular-nums' }}>
+              {thresholdMin} min
+            </div>
+          </div>
+          <div style={{ fontSize: 10, color: '#737373', marginBottom: 8 }}>marks you as inactive if no window changes for this long</div>
+          <input
+            type="range" min={1} max={10} value={thresholdMin}
+            onChange={e => onChange({ inactivityThreshold: Number(e.target.value) * 60 })}
+            style={{ width: '100%', accentColor: accent, cursor: 'pointer' }}
+          />
+        </div>
 
         {/* Proactive insights */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -208,6 +233,12 @@ export default function Settings({ settings, onBack, onChange }: Props) {
           </div>
           <Toggle on={settings.nudgeEnabled} onChange={v => onChange({ nudgeEnabled: v })} accent={accent} />
         </div>
+            
+        {/* Divider */}
+        <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.06)', marginBottom: 18 }} />
+
+        {/* ── VOICE ─────────────────────────────────────────────────────────── */}
+        <SectionLabel>voice</SectionLabel>
         
         {/* Voice Enabled */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -221,7 +252,7 @@ export default function Settings({ settings, onBack, onChange }: Props) {
         {/* Personality */}
         {settings.voiceEnabled &&<div style={{ marginBottom: 18 }}>
           <div style={{ fontSize: 12, color: '#e5e5e5', marginBottom: 3 }}>personality</div>
-          <div style={{ fontSize: 10, color: '#737373', marginBottom: 8 }}>text to speechtone of voice</div>
+          <div style={{ fontSize: 10, color: '#737373', marginBottom: 8 }}>text-to-speech tone of voice</div>
           <div style={{ display: 'flex', gap: 6 }}>
             {(['supportive', 'playful', 'drill-sergeant'] as const).map(p => {
               const sel = settings.personality === p;
@@ -244,6 +275,7 @@ export default function Settings({ settings, onBack, onChange }: Props) {
           </div>
         </div>}
 
+        
       </div>
     </div>
   );
