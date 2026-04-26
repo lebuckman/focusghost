@@ -49,6 +49,7 @@
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@google/generative-ai": "^0.24.1",
     "active-win": "^8.2.1",
+    "dotenv": "^17.4.2",
     "electron-squirrel-startup": "^1.0.1",
     "electron-store": "^8.2.0",
     "react": "^19.2.5",
