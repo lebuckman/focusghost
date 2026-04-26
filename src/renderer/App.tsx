@@ -57,6 +57,16 @@ export default function App() {
   const [collapsed,   setCollapsed]   = useState(false);
   const dimTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoDimRef = useRef(settings.autoDim);
+
+  const clearDimTimer = () => {
+    if (dimTimer.current) { clearTimeout(dimTimer.current); dimTimer.current = null; }
+  };
+  const startDimTimer = () => {
+    clearDimTimer();
+    dimTimer.current = setTimeout(() => {
+      if (autoDimRef.current) window.electronAPI.setWindowDim(true);
+    }, 5000);
+  };
   const [sessionUpdate, setSessionUpdate] = useState<SessionUpdate>({
     currentApp: '', currentAppProcess: '', currentAppBundle: '', currentAppTitle: '',
     category: 'unknown', switchCount: 0, elapsedSec: 0, focusSec: 0, driftSec: 0,
@@ -76,14 +86,7 @@ export default function App() {
   useEffect(() => {
     if (isNudgeView) return;
 
-    const applyDim = (on: boolean) => {
-      if (autoDimRef.current) window.electronAPI.setWindowDim(on);
-    };
-    const startDimTimer = () => {
-      if (dimTimer.current) clearTimeout(dimTimer.current);
-      dimTimer.current = setTimeout(() => applyDim(true), 5000);
-    };
-    const restore = () => { applyDim(false); startDimTimer(); };
+    const restore = () => { if (autoDimRef.current) window.electronAPI.setWindowDim(false); startDimTimer(); };
 
     startDimTimer();
     window.addEventListener('mousemove',    restore);
@@ -91,7 +94,7 @@ export default function App() {
     window.addEventListener('keydown',      restore);
     document.addEventListener('mouseenter', restore); // fires on cursor entering the window boundary
     return () => {
-      if (dimTimer.current) clearTimeout(dimTimer.current);
+      clearDimTimer();
       window.removeEventListener('mousemove',    restore);
       window.removeEventListener('mousedown',    restore);
       window.removeEventListener('keydown',      restore);
@@ -109,10 +112,8 @@ export default function App() {
   useEffect(() => {
     if (!nudge && screen !== 'recap') return;
     window.electronAPI.setWindowDim(false);
-    if (dimTimer.current) clearTimeout(dimTimer.current);
-    dimTimer.current = setTimeout(() => {
-      if (autoDimRef.current) window.electronAPI.setWindowDim(true);
-    }, 5000);
+    startDimTimer();
+    return () => { clearDimTimer(); };
   }, [nudge, screen]);
 
   // ── Load persisted settings on mount ─────────────────────────────────────────

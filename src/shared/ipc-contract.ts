@@ -18,6 +18,8 @@ export const IPC = {
   SESSION_RECAP:   'SESSION_RECAP',
   DEBUG_NUDGE:     'DEBUG_NUDGE',
   NUDGE_DISMISSED: 'NUDGE_DISMISSED',
+  GET_SETTINGS:    'GET_SETTINGS',
+  SET_WINDOW_DIM:  'SET_WINDOW_DIM',
 } as const;
 
 export type IPCChannel = (typeof IPC)[keyof typeof IPC];
