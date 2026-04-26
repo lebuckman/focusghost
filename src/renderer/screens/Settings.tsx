@@ -208,6 +208,15 @@ export default function Settings({ settings, onBack, onChange }: Props) {
           </div>
           <Toggle on={settings.nudgeEnabled} onChange={v => onChange({ nudgeEnabled: v })} accent={accent} />
         </div>
+        
+        {/* Voice Enabled */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 12, color: '#e5e5e5' }}>voice enabled</div>
+            <div style={{ fontSize: 10, color: '#737373', marginTop: 2 }}>ghost speaks up when you drift</div>
+          </div>
+          <Toggle on={settings.voiceEnabled} onChange={v => onChange({ voiceEnabled: v })} accent={accent} />
+        </div>
       </div>
     </div>
   );
