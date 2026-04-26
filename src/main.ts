@@ -560,13 +560,13 @@ function registerIPC() {
   // to trigger any popup type without waiting for real drift to fire.
   ipcMain.handle(IPC.DEBUG_NUDGE, (_e, type: NudgeType) => {
     const fallbacks: Record<NudgeType, NudgePayload> = {
-      'in-app':                { type: 'in-app',                tier: 1, message: '[DEBUG] in-app nudge — distraction drift',        driftType: 'distraction', context: { appName: 'YouTube', driftDurationSec: 45, ...sessionContext() } },
-      'distraction-firm':      { type: 'distraction-firm',      tier: 2, message: '[DEBUG] back to your task?',                     driftType: 'distraction', context: { appName: 'Twitter',  occurrences: 3  } },
-      'distraction-hard':      { type: 'distraction-hard',      tier: 2, message: '[DEBUG] hey — eyes on me.',                      driftType: 'distraction', context: { appName: 'Steam',    driftDurationSec: 180 } },
-      'stuck-helpful':         { type: 'stuck-helpful',         tier: 2, message: '[DEBUG] stuck on something?',                    driftType: 'stuck' },
-      'idle-soft':             { type: 'idle-soft',             tier: 2, message: '[DEBUG] still there?',                           driftType: 'distraction' },
-      'pattern-observational': { type: 'pattern-observational', tier: 2, message: '[DEBUG] third time on Reddit in 10 minutes.',     driftType: 'distraction', context: { appName: 'Reddit',  occurrences: 3  } },
-      'milestone-positive':    { type: 'milestone-positive',    tier: 2, message: '[DEBUG] 25 minutes of deep focus.',               driftType: 'frequency' },
+      'in-app':                { type: 'in-app',                tier: 1, message: "you've been on YouTube for a bit. still working on your task?",                                              driftType: 'distraction', context: { appName: 'YouTube',  driftDurationSec: 45,  ...sessionContext() } },
+      'distraction-firm':      { type: 'distraction-firm',      tier: 2, message: "you've been here for 2 minutes. your task is still waiting.",                                              driftType: 'distraction', context: { appName: 'Twitter',  driftDurationSec: 120, occurrences: 3, ...sessionContext() } },
+      'distraction-hard':      { type: 'distraction-hard',      tier: 2, message: "past-you set this session for a reason. future-you will thank you for getting back.",                     driftType: 'distraction', context: { appName: 'Steam',    driftDurationSec: 180, ...sessionContext() } },
+      'stuck-helpful':         { type: 'stuck-helpful',         tier: 2, message: "you've been on the same line of code for 8 minutes — but i can help if you want to talk it out.",        driftType: 'stuck',       context: { ...sessionContext() } },
+      'idle-soft':             { type: 'idle-soft',             tier: 2, message: "no movement for 4 minutes. taking a quick break, or did i lose you?",                                     driftType: 'distraction', context: { ...sessionContext() } },
+      'pattern-observational': { type: 'pattern-observational', tier: 2, message: "want me to block Twitter for the rest of the session?",                                                   driftType: 'distraction', context: { appName: 'Twitter',   occurrences: 3, ...sessionContext() } },
+      'milestone-positive':    { type: 'milestone-positive',    tier: 2, message: "zero switches in 25 minutes. this might be your best focus stretch this week.",                           driftType: 'frequency',   context: { ...sessionContext() } },
     };
     const payload = fallbacks[type] ?? fallbacks['in-app'];
     const isInterrupt = payload.driftType === 'distraction' || payload.driftType === 'stuck';
