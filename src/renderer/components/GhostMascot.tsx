@@ -1,13 +1,13 @@
 import React from 'react';
-import type { GhostMascotState } from '../../shared/ipc-contract';
+import type { GhostMascotState, WindowCategory } from '../../shared/ipc-contract';
 
 interface Props {
   state: GhostMascotState;
   size?: number;
   tint?: string;
+  category?: WindowCategory;
 }
 
-// Map ipc-contract states to visual states used in the design
 type VisualState = 'calm' | 'drifting' | 'stuck' | 'happy' | 'sleepy';
 function toVisual(state: GhostMascotState): VisualState {
   if (state === 'concerned') return 'drifting';
@@ -31,7 +31,6 @@ const ANIM: Record<VisualState, string> = {
   sleepy:   'ghostFloat 5s ease-in-out infinite',
 };
 
-// Eye shape config per state
 const EYES: Record<VisualState, { yRatio: number; hRatio: number; wRatio: number; squint: number }> = {
   calm:     { yRatio: 0.42, hRatio: 0.08, wRatio: 0.08, squint: 0 },
   drifting: { yRatio: 0.42, hRatio: 0.06, wRatio: 0.10, squint: 0.3 },
@@ -40,13 +39,17 @@ const EYES: Record<VisualState, { yRatio: number; hRatio: number; wRatio: number
   sleepy:   { yRatio: 0.44, hRatio: 0.02, wRatio: 0.10, squint: 1 },
 };
 
-export default function GhostMascot({ state, size = 48, tint: tintOverride }: Props) {
-  const vs = toVisual(state);
+export default function GhostMascot({ state, size = 48, tint: tintOverride, category }: Props) {
+  // category 'focus' promotes the ghost to the happy visual
+  const baseVs = toVisual(state);
+  const vs: VisualState = category === 'focus' ? 'happy' : baseVs;
+
   const w = size;
   const h = size * 1.1;
   const eyes = EYES[vs];
   const bodyTint = tintOverride ?? TINT[vs];
   const shadowColor = tintOverride ?? '#5dd8e6';
+  const isDistraction = category === 'distraction';
 
   return (
     <div style={{ display: 'inline-block', width: w, height: h, flexShrink: 0 }}>
@@ -57,6 +60,7 @@ export default function GhostMascot({ state, size = 48, tint: tintOverride }: Pr
         style={{
           filter: `drop-shadow(0 0 6px ${shadowColor}8c) drop-shadow(0 0 12px ${shadowColor}40)`,
           animation: ANIM[vs],
+          overflow: 'visible',
         }}
       >
         {/* Body */}
@@ -91,7 +95,7 @@ export default function GhostMascot({ state, size = 48, tint: tintOverride }: Pr
           ry={h * eyes.hRatio / 2 * (1 - eyes.squint * 0.9)}
           fill="#111"
         />
-        {/* Drifting: blush circles */}
+        {/* Drifting: red blush */}
         {vs === 'drifting' && (
           <>
             <circle cx={w * 0.28} cy={h * 0.55} r={w * 0.04} fill="#f87171" opacity={0.4} />
@@ -102,15 +106,36 @@ export default function GhostMascot({ state, size = 48, tint: tintOverride }: Pr
         {vs === 'stuck' && (
           <ellipse cx={w * 0.5} cy={h * 0.58} rx={w * 0.04} ry={h * 0.02} fill="#111" />
         )}
-        {/* Happy: smile arc */}
+        {/* Happy: pink blush + smile */}
         {vs === 'happy' && (
-          <path
-            d={`M ${w * 0.42} ${h * 0.56} Q ${w * 0.5} ${h * 0.62}, ${w * 0.58} ${h * 0.56}`}
-            stroke="#111"
-            strokeWidth={1}
-            fill="none"
-            strokeLinecap="round"
-          />
+          <>
+            <circle cx={w * 0.27} cy={h * 0.53} r={w * 0.05} fill="#f9a8d4" opacity={0.45} />
+            <circle cx={w * 0.73} cy={h * 0.53} r={w * 0.05} fill="#f9a8d4" opacity={0.45} />
+            <path
+              d={`M ${w * 0.42} ${h * 0.56} Q ${w * 0.5} ${h * 0.63}, ${w * 0.58} ${h * 0.56}`}
+              stroke="#111"
+              strokeWidth={1.2}
+              fill="none"
+              strokeLinecap="round"
+            />
+          </>
+        )}
+        {/* Distraction: 💢 anger symbol on upper-right of head */}
+        {isDistraction && (
+          <text
+            x={w * 0.68}
+            y={h * 0.17}
+            fontSize={w * 0.36}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            style={{
+              animation: 'angerPulse 1.6s ease-in-out infinite',
+              transformBox: 'fill-box',
+              transformOrigin: 'center',
+            }}
+          >
+            💢
+          </text>
         )}
       </svg>
     </div>
