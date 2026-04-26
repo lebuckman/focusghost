@@ -259,9 +259,10 @@ function registerIPC() {
       };
       activeSession.chatHistory.push(userEntry);
 
+      const incomingHistory = payload.chatHistory ?? [];
       const historyForModel =
-        payload.chatHistory.length > 0
-          ? payload.chatHistory
+        incomingHistory.length > 0
+          ? incomingHistory
           : activeSession.chatHistory;
       const replyText = await generateChatResponse(
         activeSession,
