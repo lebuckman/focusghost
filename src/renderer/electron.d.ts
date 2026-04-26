@@ -20,6 +20,12 @@ declare global {
       minimizeWindow:     () => void;
       collapseWindow:     () => void;
       expandWindow:       () => void;
+      getSettings:        () => Promise<unknown>;
+      requestGhostChat:   (reason?: string) => Promise<void>;
+      snoozeNudge:        (appName?: string) => Promise<void>;
+      blockApp:           (appName: string, until: number) => Promise<void>;
+      setWindowDim:       (dimmed: boolean) => Promise<void>;
+      platform:           string;
     };
   }
 }

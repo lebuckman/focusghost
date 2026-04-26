@@ -50,6 +50,12 @@ input, textarea {
   50% { transform: translateY(-2px) rotate(1deg); }
 }
 
+/* Custom duration input cursor */
+@keyframes fgCursorBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
 /* Chat animations */
 @keyframes pulseDot {
   0%, 100% { opacity: 0.4; }

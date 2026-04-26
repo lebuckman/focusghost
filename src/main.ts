@@ -7,6 +7,7 @@ import {
   showInterruptNudge,
   closeNudgeWindow,
   isNudgeWindowOpen,
+  isNudgeWindowSender,
 } from "./main/nudge-window";
 import path from "path";
 import started from "electron-squirrel-startup";
@@ -26,8 +27,6 @@ import {
   type GhostMascotState,
   type NudgePayload,
   type NudgeType,
-  type GhostMessagePayload,
-  type OpenGhostChatPayload,
 } from "./shared/ipc-contract";
 import {
   initializeAIOrchestrator,
@@ -203,6 +202,10 @@ interface SessionState {
   distractionHistory: Record<string, number[]>;
   nudgeCooldownUntil: Partial<Record<string, number>>;
   milestonesFired: Set<string>;
+  stuckRollingLog: SwitchEntry[];   // cleared after stuck fires; separate from switchLog
+  idleSoftFired: boolean;           // true after idle-soft fires; reset when user is active
+  focusStreakStart: number | null;  // timestamp when current focus streak began
+  blockedApps: Map<string, number>; // appName → blockedUntil timestamp
 }
 
 let session: SessionState | null = null;
@@ -210,6 +213,8 @@ let settings: AppSettings = {
   ...DEFAULT_SETTINGS,
   ...(store.get("settings") as Partial<AppSettings> | undefined),
 };
+// Always apply the demo inactivity threshold regardless of what's cached in the store
+settings.inactivityThreshold = DEFAULT_SETTINGS.inactivityThreshold;
 let mainWindow: BrowserWindow | null = null;
 let titleSettleTimer: ReturnType<typeof setTimeout> | null = null;
 let preCheckinHeight = 620;
@@ -238,16 +243,28 @@ function deriveGhostState(
 
 // ── Nudge helpers ─────────────────────────────────────────────────────────────
 
+// Demo: cooldowns are short so all nudge types can be triggered back-to-back.
+// Raise to 3/5/5/10/10/10 min for production.
 const NUDGE_COOLDOWNS: Record<string, number> = {
   // demo: short cooldowns for testability — restore to 3/5/5/10/10/10 min for production
-  "in-app": 30 * 1000,
-  "distraction-firm": 60 * 1000,
-  "distraction-hard": 60 * 1000,
-  "stuck-helpful": 90 * 1000,
-  "idle-soft": 90 * 1000,
-  "pattern-observational": 90 * 1000,
+  "in-app": 10 * 1000,
+  "distraction-firm": 15 * 1000,
+  "distraction-hard": 15 * 1000,
+  "stuck-helpful": 20 * 1000,
+  "idle-soft": 20 * 1000,
+  "pattern-observational": 20 * 1000,
   "milestone-positive": Infinity,
 };
+
+// DEMO THRESHOLDS — revert to production values after demo
+const DISTRACTION_FIRM_SEC  = 8;    // prod: 120
+const PATTERN_VISIT_COUNT   = 1;    // prod: 2  (fire pattern on 2nd visit)
+const PATTERN_WINDOW_SEC    = 90;   // prod: 600
+const STUCK_SWITCH_COUNT    = 3;    // prod: 6
+const STUCK_WINDOW_SEC      = 45;   // prod: 300
+const STUCK_RECENCY_SEC     = 15;   // prod: 30
+const IDLE_TRIGGER_SEC      = 10;   // same for prod
+const MILESTONE_STREAK_SEC  = 20;   // prod: 25 * 60
 
 function showCheckinNudge(
   win: BrowserWindow | null,
@@ -273,19 +290,21 @@ function sessionContext() {
   return { task: session.task, investedSec, remainingSec };
 }
 
-async function fireNudge(payload: NudgePayload): Promise<boolean> {
+async function fireNudge(payload: NudgePayload, force = false): Promise<boolean> {
   if (!session) return false;
-  const isInterrupt =
-    payload.driftType === "distraction" || payload.driftType === "stuck";
+  const isInterrupt = payload.tier === 2;
   if (!isInterrupt && !mainWindow) return false;
-  // Don't overwrite a nudge that's currently visible — user hasn't dismissed it yet
-  if (isInterrupt && isNudgeWindowOpen()) return false;
+  // Non-force interrupts are blocked if a popup is already visible.
+  // idle-soft (force=true) closes and replaces whatever is showing.
+  if (isInterrupt && !force && isNudgeWindowOpen()) return false;
+
   const now = Date.now();
   const cooldownExpiry = session.nudgeCooldownUntil[payload.type];
   if (cooldownExpiry !== undefined && now < cooldownExpiry) return false;
 
+  const sensitivityMult = settings.nudgeSensitivity === "gentle" ? 2 : settings.nudgeSensitivity === "strict" ? 0.5 : 1;
   session.nudgeCooldownUntil[payload.type] =
-    now + (NUDGE_COOLDOWNS[payload.type] ?? 5 * 60 * 1000);
+    now + (NUDGE_COOLDOWNS[payload.type] ?? 5 * 60 * 1000) * sensitivityMult;
 
   const aiMessage = await generateNudgeMessage(session, payload.driftType);
   const finalPayload: NudgePayload = { ...payload, message: aiMessage };
@@ -297,7 +316,8 @@ async function fireNudge(payload: NudgePayload): Promise<boolean> {
   });
 
   if (isInterrupt) {
-    showInterruptNudge(finalPayload);
+    // Pass force so showInterruptNudge can close an existing popup for idle-soft
+    showInterruptNudge(finalPayload, force);
   } else {
     showCheckinNudge(mainWindow, finalPayload);
   }
@@ -326,30 +346,34 @@ async function checkDistractionDrift(
   }
 
   if (session.distractionStartTime === null) {
-    session.distractionStartTime = now;
+    // Blocked apps skip the normal 8s threshold — fire on the very next tick
+    const blockedUntil = session.blockedApps.get(appName);
+    const isBlocked = blockedUntil !== undefined && now < blockedUntil;
+    session.distractionStartTime = isBlocked ? now - DISTRACTION_FIRM_SEC * 1000 : now;
     return;
   }
 
   const consecutiveSec = (now - session.distractionStartTime) / 1000;
-  if (consecutiveSec < 90) return; // demo: 1m30s — raise to 180+ for production
+  const blockedUntil = session.blockedApps.get(appName);
+  const isBlocked = blockedUntil !== undefined && now < blockedUntil;
+  if (consecutiveSec < (isBlocked ? 1 : DISTRACTION_FIRM_SEC)) return;
 
-  const windowStart = now - 10 * 60 * 1000;
+  const windowStart = now - PATTERN_WINDOW_SEC * 1000;
   const history = session.distractionHistory[appName] ?? [];
   const recentOccurrences = history.filter((t) => t >= windowStart).length;
 
-  // Record this occurrence (pruning old entries first) and reset timer so it only fires once per 60s-stretch
+  // Record occurrence and reset timer — prevents re-fire until DISTRACTION_FIRM_SEC elapses again
   session.distractionHistory[appName] = [
     ...history.filter((t) => t >= windowStart),
     now,
   ];
   session.distractionStartTime = now;
 
-  if (recentOccurrences >= 2) {
-    // 3rd+ time (0-indexed: 2 prior + this one = 3rd)
+  if (recentOccurrences >= PATTERN_VISIT_COUNT) {
     await fireNudge({
-      type: "distraction-firm",
+      type: "pattern-observational",
       tier: 2,
-      message: `third time on ${appName} in 10 minutes. your task is still waiting.`,
+      message: `${appName.toLowerCase()} again — want me to block it for the rest of the session?`,
       driftType: "distraction",
       context: {
         appName,
@@ -359,15 +383,19 @@ async function checkDistractionDrift(
       },
     });
   } else {
+    const blockMsg = isBlocked && blockedUntil
+      ? `${appName.toLowerCase()} is blocked — back to "${session.task}"?`
+      : `you've been on ${appName.toLowerCase()} for ${Math.round(consecutiveSec)}s. "${session.task}" is still waiting.`;
     await fireNudge({
       type: "distraction-firm",
       tier: 2,
-      message: `you've been on ${appName} for a bit. still working on "${session.task}"?`,
+      message: blockMsg,
       driftType: "distraction",
       context: {
         appName,
         driftDurationSec: Math.round(consecutiveSec),
-        occurrences: recentOccurrences + 1,
+        occurrences: 1,
+        blockUntil: blockedUntil,
         ...sessionContext(),
       },
     });
@@ -376,65 +404,81 @@ async function checkDistractionDrift(
 
 async function checkStuckDrift(now: number) {
   if (!session) return;
-  const windowStart = now - 5 * 60 * 1000;
-  const recent = session.switchLog.filter((s) => s.timestamp >= windowStart);
-  if (recent.length < 10) return;
 
-  const distractionCount = recent.filter(
-    (s) => s.category === "distraction",
-  ).length;
-  if (distractionCount / recent.length > 0.2) return;
+  // Prune entries older than the rolling window
+  session.stuckRollingLog = session.stuckRollingLog.filter(
+    (s) => s.timestamp >= now - STUCK_WINDOW_SEC * 1000,
+  );
+
+  if (session.stuckRollingLog.length < STUCK_SWITCH_COUNT) return;
+
+  // Most recent switch must be recent — user is actively cycling right now
+  const mostRecent = session.stuckRollingLog[session.stuckRollingLog.length - 1];
+  if (now - mostRecent.timestamp > STUCK_RECENCY_SEC * 1000) return;
+
+  // Fewer than 20% distraction switches — this is a focus/stuck pattern, not distraction drift
+  const distractionCount = session.stuckRollingLog.filter((s) => s.category === "distraction").length;
+  if (distractionCount / session.stuckRollingLog.length >= 0.2) return;
 
   const fired = await fireNudge({
     type: "stuck-helpful",
     tier: 2,
-    message: `you've been cycling apps a lot — what's snagging you?`,
+    message: `you've been cycling apps — what's snagging you?`,
     driftType: "stuck",
+    context: { ...sessionContext() },
   });
 
-  // Only open ghost chat once per cooldown — not on every 2s tick
-  if (fired) {
-    mainWindow?.webContents.send(IPC.OPEN_GHOST_CHAT, {
-      trigger: "stuck",
-    } as OpenGhostChatPayload);
-    const ghostMsg: GhostMessagePayload = {
-      message: `noticed you've been cycling between apps — what's blocking you on "${session.task}"?`,
-      trigger: "stuck_drift",
-      timestamp: now,
-    };
-    mainWindow?.webContents.send(IPC.GHOST_MESSAGE, ghostMsg);
-    session.chatHistory.push({
-      role: "ghost",
-      content: ghostMsg.message,
-      timestamp: now,
-    });
-  }
+  // Clear the log after firing so stuck can't re-fire on the same switch burst
+  if (fired) session.stuckRollingLog = [];
 }
 
 async function checkInactivity(_now: number) {
   if (!session) return;
   const idleSec = powerMonitor.getSystemIdleTime();
-  if (idleSec >= settings.inactivityThreshold) {
+
+  // Reset flag as soon as the user is active again
+  if (idleSec < 5) {
+    session.idleSoftFired = false;
+    return;
+  }
+
+  // Fire once per idle stretch; force-replaces any existing popup
+  if (idleSec >= IDLE_TRIGGER_SEC && !session.idleSoftFired) {
+    session.idleSoftFired = true;
     await fireNudge({
       type: "idle-soft",
       tier: 2,
-      message: `still there? no activity for ${Math.round(idleSec / 60)} minutes.`,
+      message: `still there? you've been away for ${Math.round(idleSec)}s.`,
       driftType: "distraction",
-    });
+      context: { ...sessionContext() },
+    }, true /* force — idle overrides any existing popup */);
   }
 }
 
 async function checkMilestone(now: number) {
   if (!session) return;
   if (session.milestonesFired.has("25min")) return;
-  if (session.lastCategory !== "focus") return;
-  if (now - session.lastSwitchTime >= 25 * 60 * 1000) {
+
+  if (session.lastCategory !== "focus") {
+    // Reset streak whenever the user leaves a focus app
+    session.focusStreakStart = null;
+    return;
+  }
+
+  // Start the streak timer on first focus tick
+  if (session.focusStreakStart === null) {
+    session.focusStreakStart = now;
+    return;
+  }
+
+  if (now - session.focusStreakStart >= MILESTONE_STREAK_SEC * 1000) {
     session.milestonesFired.add("25min");
     await fireNudge({
       type: "milestone-positive",
       tier: 2,
-      message: `25 minutes of deep focus — that's your best streak. keep it going.`,
+      message: `${MILESTONE_STREAK_SEC}s of continuous focus — solid work. keep it going.`,
       driftType: "frequency",
+      context: { ...sessionContext() },
     });
   }
 }
@@ -520,6 +564,7 @@ async function pollActiveWindow() {
         titleSettleTimer = null;
       }
       session.switchLog.push({ app: appName, category, timestamp: now, title });
+      session.stuckRollingLog.push({ app: appName, category, timestamp: now });
       session.switchCount += 1;
       session.lastApp = appName;
       session.lastCategory = category;
@@ -542,6 +587,7 @@ async function pollActiveWindow() {
           timestamp: t,
           title: capturedTitle,
         });
+        session.stuckRollingLog.push({ app: capturedApp, category: capturedCategory, timestamp: t });
         session.switchCount += 1;
         session.lastAppChangeTime = t;
         session.lastSwitchTime = t;
@@ -558,11 +604,11 @@ async function pollActiveWindow() {
       category = "inactive";
     }
 
-    // Accumulate focus/drift in 2-second ticks
-    if (category === "focus" || category === "research") {
-      session.focusSec += 2;
-    } else if (category === "distraction") {
-      session.driftSec += 2;
+    // Accumulate focus/drift in 1-second ticks
+    if (category === 'focus' || category === 'research') {
+      session.focusSec += 1;
+    } else if (category === 'distraction') {
+      session.driftSec += 1;
     }
 
     mainWindow.webContents.send(
@@ -722,7 +768,7 @@ function registerIPC() {
       focusSec: 0,
       driftSec: 0,
       switchCount: 0,
-      pollTimer: setInterval(pollActiveWindow, 2000),
+      pollTimer: setInterval(pollActiveWindow, 1000),
       endTimer: setTimeout(endSession, payload.durationMin * 60 * 1000),
       lastAppChangeTime: now,
       lastSwitchTime: now,
@@ -730,6 +776,10 @@ function registerIPC() {
       distractionHistory: {},
       nudgeCooldownUntil: {},
       milestonesFired: new Set(),
+      stuckRollingLog: [],
+      idleSoftFired: false,
+      focusStreakStart: null,
+      blockedApps: new Map(),
     };
     store.set("currentSession", {
       task: session.task,
@@ -783,8 +833,8 @@ function registerIPC() {
     },
   );
 
-  ipcMain.handle(IPC.DISMISS_NUDGE, () => {
-    if (isNudgeWindowOpen()) {
+  ipcMain.handle(IPC.DISMISS_NUDGE, (event) => {
+    if (isNudgeWindowSender(event.sender)) {
       closeNudgeWindow();
     } else {
       restoreMainWindow(mainWindow);
@@ -797,6 +847,33 @@ function registerIPC() {
     if (mainWindow && "alwaysOnTop" in payload) {
       mainWindow.setAlwaysOnTop(settings.alwaysOnTop);
     }
+  });
+
+  ipcMain.handle(IPC.GET_SETTINGS, () => ({ ...settings }));
+
+  ipcMain.handle(IPC.REQUEST_GHOST_CHAT, (_e, reason?: string) => {
+    mainWindow?.webContents.send(IPC.OPEN_GHOST_CHAT, { trigger: 'stuck', prefillMessage: reason });
+  });
+
+  ipcMain.handle(IPC.SNOOZE_NUDGE, (_e, appName?: string) => {
+    if (!session) return;
+    const snoozeUntil = Date.now() + 60 * 1000;
+    // Extend distraction cooldowns so neither distraction-firm nor pattern fires for 60s
+    session.nudgeCooldownUntil['distraction-firm']      = Math.max(session.nudgeCooldownUntil['distraction-firm']      ?? 0, snoozeUntil);
+    session.nudgeCooldownUntil['pattern-observational'] = Math.max(session.nudgeCooldownUntil['pattern-observational'] ?? 0, snoozeUntil);
+    // Reset entry timer so the 8s window starts fresh after the snooze expires
+    if (appName) session.distractionStartTime = null;
+  });
+
+  ipcMain.handle(IPC.BLOCK_APP, (_e, appName: string, until: number) => {
+    if (!session) return;
+    session.blockedApps.set(appName, until);
+    // Reset distraction timer so the 1s threshold fires immediately on next visit
+    session.distractionStartTime = null;
+  });
+
+  ipcMain.handle(IPC.SET_WINDOW_DIM, (_e, dimmed: boolean) => {
+    mainWindow?.setOpacity(dimmed ? 0.8 : 1.0);
   });
 
   // DEBUG: Person 3 can call window.electronAPI.debugNudge('distraction-firm') from DevTools
@@ -898,9 +975,9 @@ const createWindow = () => {
     width: 380,
     height: 620,
     alwaysOnTop: true,
-    titleBarStyle: process.platform === "darwin" ? "hidden" : "default",
-    trafficLightPosition:
-      process.platform === "darwin" ? { x: 10, y: 11 } : undefined,
+    frame: process.platform === "darwin",
+    titleBarStyle: process.platform === "darwin" ? "hidden" : undefined,
+    trafficLightPosition: process.platform === "darwin" ? { x: 10, y: 11 } : undefined,
     resizable: true,
     movable: true,
     webPreferences: {

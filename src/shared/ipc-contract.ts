@@ -18,6 +18,11 @@ export const IPC = {
   SESSION_RECAP: "SESSION_RECAP",
   DEBUG_NUDGE: "DEBUG_NUDGE",
   NUDGE_DISMISSED: "NUDGE_DISMISSED",
+  GET_SETTINGS: "GET_SETTINGS",
+  SET_WINDOW_DIM: "SET_WINDOW_DIM",
+  REQUEST_GHOST_CHAT: "REQUEST_GHOST_CHAT",
+  SNOOZE_NUDGE: "SNOOZE_NUDGE",
+  BLOCK_APP: "BLOCK_APP",
 } as const;
 
 export type IPCChannel = (typeof IPC)[keyof typeof IPC];
@@ -112,6 +117,7 @@ export interface NudgePayload {
 }
 export interface OpenGhostChatPayload {
   trigger: DriftType;
+  prefillMessage?: string;
 }
 export interface GhostMessagePayload {
   message: string;
@@ -159,6 +165,7 @@ export interface AppSettings {
   nudgeSensitivity: "gentle" | "balanced" | "strict";
   alwaysOnTop: boolean;
   autoCollapse: boolean;
+  autoDim: boolean;
 }
 
 export interface ActiveSession {
@@ -180,7 +187,7 @@ export interface AppStore {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   driftThreshold: 7,
-  inactivityThreshold: 30, // demo: 1m30s — raise to 300 (5min) for production
+  inactivityThreshold: 10, // demo: 10s — raise to 300 (5min) for production
   nudgeEnabled: true,
   voiceEnabled: false,
   opacity: 0.9,
@@ -188,6 +195,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   nudgeSensitivity: "balanced",
   alwaysOnTop: true,
   autoCollapse: false,
+  autoDim: false,
 };
 
 export const MOCK_SESSION_UPDATE: SessionUpdate = {
