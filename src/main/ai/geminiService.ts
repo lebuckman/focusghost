@@ -315,6 +315,17 @@ export async function geminiGenerateInsight(
     AI_COPY.insightReturn,
   ].join("\n");
 
-  const text = await generateText(prompt);
-  return text || fallback;
+  const model = getModel();
+  if (!model) return fallback;
+
+  try {
+    const result = await withTimeout(
+      generateText(prompt),
+      6000,
+    );
+    const text = normalizeOutput(result || "");
+    return text;
+  } catch {
+    return fallback;
+  }
 }
