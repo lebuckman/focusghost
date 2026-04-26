@@ -60,16 +60,16 @@ let modelCache: {
 
 function getFallbackNudge(driftType: DriftType): string {
   if (driftType === "stuck") {
-    return `You look stuck on this step. Want to tell me what is snagging you so we can pick one next action?`;
+    return `you look stuck on this step. want to tell me what's snagging you?`;
   }
   if (driftType === "frequency") {
-    return `I noticed a lot of app switching in the last few minutes. Want to try a 5-minute focus sprint on just this task?`;
+    return `i noticed you switched between apps a few times. want to try a 5-minute focus sprint?`;
   }
-  return `You drifted away from your task for a bit. Want to close distractions and do one focused pass together?`;
+  return `you drifted away for a bit... are you ready to jump back in?`;
 }
 
-function getFallbackChat(_task: string): string {
-  return "Got you. Let's shrink it to one step. What's the exact thing you're trying to finish right now?";
+function getFallbackChat(task: string): string {
+  return "got you. let's shrink it down. what's one thing you're trying to finish right now?";
 }
 
 interface TrailAnalysis {
@@ -189,6 +189,7 @@ function normalizeOutput(text: string): string {
     .replace(/^"+|"+$/g, "")
     .replace(/^'+|'+$/g, "")
     .replace(/\s+/g, " ")
+    .toLowerCase() // Convert to lowercase
     .trim();
 
   if (!cleaned) return "";
@@ -279,10 +280,16 @@ export async function geminiGenerateNudge(
     `Switches in last 10 min: ${recentSwitchCount}`,
     `Recent apps: ${recentApps.join(", ") || "none"}`,
     `Drift type: "${driftType}"`,
-    `Historical pattern from Backboard: "${formatContext(backboardContext)}"`,
+    `Historical pattern from past sessions (used sparingly to personalize message): "${formatContext(backboardContext)}"`,
+    `If the user has shared personal interests in past chats, customize chats to appeal to their interests or personality traits when relevant.`,
+    `(e.g. If the user likes sports, you can say "want me to help you get the ball rolling?".)`,
+    `If the user reveals their emotional state, provide empathetic encouragement specific to their state of mind.`,
+    `(e.g., If the user is working on math homework and shares that they are frustrated, you can say "i know math homework can be frustrating, but i'm here to help!")`,
     AI_COPY.nudgeFormat,
     AI_COPY.nudgeConstraint,
     AI_COPY.noLecture,
+    AI_COPY.cutesyness,
+    AI_COPY.lowercaseOnly,
   ].join("\n");
 
   const text = await generateText(prompt);
@@ -344,7 +351,7 @@ export async function geminiGenerateChat(
     "User: How do I find the mean?",
     "Good: add all the numbers, then divide by how many numbers there are. start by getting the total first.",
     "Off-track question example:",
-    "User: What's the best fast food place?",
+    "User: what's the best fast food place?",
     "Good: taco bell is solid if you want cheap and quick. tiny redirect though, let's finish this focus step first.",
     "Stuck example:",
     "User: I'm stuck on my speech title.",
@@ -402,6 +409,17 @@ export async function geminiGenerateInsight(
     AI_COPY.lowercaseOnly,
   ].join("\n");
 
-  const text = await generateText(prompt);
-  return text || fallback;
+  const model = getModel();
+  if (!model) return fallback;
+
+  try {
+    const result = await withTimeout(
+      generateText(prompt),
+      6000,
+    );
+    const text = normalizeOutput(result || "");
+    return text;
+  } catch {
+    return fallback;
+  }
 }
