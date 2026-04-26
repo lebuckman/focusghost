@@ -31,6 +31,16 @@ export default function NudgeView() {
     window.electronAPI.requestGhostChat(reason !== 'chat_with_ghost' ? reason : undefined);
   };
   const endSession = () => { window.electronAPI.dismissNudge(); window.electronAPI.endSession(); };
+  const snooze     = () => {
+    window.electronAPI.dismissNudge();
+    window.electronAPI.snoozeNudge(nudge?.context?.appName);
+  };
+  const block      = () => {
+    window.electronAPI.dismissNudge();
+    if (nudge?.context?.appName) {
+      window.electronAPI.blockApp(nudge.context.appName, Date.now() + 30 * 60 * 1000);
+    }
+  };
 
   return (
     <div style={{
@@ -51,6 +61,8 @@ export default function NudgeView() {
           onDismiss={dismiss}
           onStuck={stuck}
           onEndSession={endSession}
+          onSnooze={snooze}
+          onBlock={block}
           accent={accent}
         />
       ) : (

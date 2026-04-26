@@ -140,6 +140,7 @@ interface SessionState {
   stuckRollingLog: SwitchEntry[];   // cleared after stuck fires; separate from switchLog
   idleSoftFired: boolean;           // true after idle-soft fires; reset when user is active
   focusStreakStart: number | null;  // timestamp when current focus streak began
+  blockedApps: Map<string, number>; // appName → blockedUntil timestamp
 }
 
 let session: SessionState | null = null;
@@ -260,12 +261,17 @@ async function checkDistractionDrift(appName: string, category: WindowCategory, 
   }
 
   if (session.distractionStartTime === null) {
-    session.distractionStartTime = now;
+    // Blocked apps skip the normal 8s threshold — fire on the very next tick
+    const blockedUntil = session.blockedApps.get(appName);
+    const isBlocked = blockedUntil !== undefined && now < blockedUntil;
+    session.distractionStartTime = isBlocked ? now - DISTRACTION_FIRM_SEC * 1000 : now;
     return;
   }
 
   const consecutiveSec = (now - session.distractionStartTime) / 1000;
-  if (consecutiveSec < DISTRACTION_FIRM_SEC) return;
+  const blockedUntil = session.blockedApps.get(appName);
+  const isBlocked = blockedUntil !== undefined && now < blockedUntil;
+  if (consecutiveSec < (isBlocked ? 1 : DISTRACTION_FIRM_SEC)) return;
 
   const windowStart = now - PATTERN_WINDOW_SEC * 1000;
   const history = session.distractionHistory[appName] ?? [];
@@ -284,12 +290,15 @@ async function checkDistractionDrift(appName: string, category: WindowCategory, 
       context: { appName, driftDurationSec: Math.round(consecutiveSec), occurrences: recentOccurrences + 1, ...sessionContext() },
     });
   } else {
+    const blockMsg = isBlocked && blockedUntil
+      ? `${appName.toLowerCase()} is blocked — back to "${session.task}"?`
+      : `you've been on ${appName.toLowerCase()} for ${Math.round(consecutiveSec)}s. "${session.task}" is still waiting.`;
     await fireNudge({
       type: 'distraction-firm',
       tier: 2,
-      message: `you've been on ${appName.toLowerCase()} for ${Math.round(consecutiveSec)}s. "${session.task}" is still waiting.`,
+      message: blockMsg,
       driftType: 'distraction',
-      context: { appName, driftDurationSec: Math.round(consecutiveSec), occurrences: 1, ...sessionContext() },
+      context: { appName, driftDurationSec: Math.round(consecutiveSec), occurrences: 1, blockUntil: blockedUntil, ...sessionContext() },
     });
   }
 }
@@ -620,6 +629,7 @@ function registerIPC() {
       stuckRollingLog: [],
       idleSoftFired: false,
       focusStreakStart: null,
+      blockedApps: new Map(),
     };
     store.set('currentSession', {
       task: session.task,
@@ -692,6 +702,23 @@ function registerIPC() {
 
   ipcMain.handle(IPC.REQUEST_GHOST_CHAT, (_e, reason?: string) => {
     mainWindow?.webContents.send(IPC.OPEN_GHOST_CHAT, { trigger: 'stuck', prefillMessage: reason });
+  });
+
+  ipcMain.handle(IPC.SNOOZE_NUDGE, (_e, appName?: string) => {
+    if (!session) return;
+    const snoozeUntil = Date.now() + 60 * 1000;
+    // Extend distraction cooldowns so neither distraction-firm nor pattern fires for 60s
+    session.nudgeCooldownUntil['distraction-firm']      = Math.max(session.nudgeCooldownUntil['distraction-firm']      ?? 0, snoozeUntil);
+    session.nudgeCooldownUntil['pattern-observational'] = Math.max(session.nudgeCooldownUntil['pattern-observational'] ?? 0, snoozeUntil);
+    // Reset entry timer so the 8s window starts fresh after the snooze expires
+    if (appName) session.distractionStartTime = null;
+  });
+
+  ipcMain.handle(IPC.BLOCK_APP, (_e, appName: string, until: number) => {
+    if (!session) return;
+    session.blockedApps.set(appName, until);
+    // Reset distraction timer so the 1s threshold fires immediately on next visit
+    session.distractionStartTime = null;
   });
 
   ipcMain.handle(IPC.SET_WINDOW_DIM, (_e, dimmed: boolean) => {

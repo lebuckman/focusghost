@@ -21,6 +21,8 @@ export const IPC = {
   GET_SETTINGS:      'GET_SETTINGS',
   SET_WINDOW_DIM:    'SET_WINDOW_DIM',
   REQUEST_GHOST_CHAT: 'REQUEST_GHOST_CHAT',
+  SNOOZE_NUDGE:      'SNOOZE_NUDGE',
+  BLOCK_APP:         'BLOCK_APP',
 } as const;
 
 export type IPCChannel = (typeof IPC)[keyof typeof IPC];
