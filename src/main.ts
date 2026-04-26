@@ -1,7 +1,8 @@
 import "dotenv/config";
 
 import { randomUUID } from "crypto";
-import { app, BrowserWindow, ipcMain, powerMonitor, Menu } from "electron";
+import { app, BrowserWindow, ipcMain, powerMonitor, Menu, shell } from "electron";
+import { spawn } from 'child_process';
 import { extractTabTitle } from "./main/get-browser-tab";
 import {
   showInterruptNudge,
@@ -35,12 +36,8 @@ import {
   generateInsight,
   generateNudgeMessage,
   recordSessionMemory,
-<<<<<<< HEAD
-} from "./main/ai/aiOrchestrator";
-=======
 } from './main/ai/aiOrchestrator';
 import { speakNudge, stopNudgeSpeech } from './main/voice/elevenLabsService';
->>>>>>> 6aa41db (refactor(new elevenlabs))
 
 if (started) app.quit();
 
@@ -301,12 +298,36 @@ async function fireNudge(payload: NudgePayload): Promise<boolean> {
     timestamp: now,
   });
 
+  console.debug('[Nudge] fired', { type: finalPayload.type, driftType: finalPayload.driftType, messageLen: finalPayload.message?.length ?? 0 });
+
   if (isInterrupt) {
     showInterruptNudge(finalPayload);
   } else {
     showCheckinNudge(mainWindow, finalPayload);
   }
 
+  // Audible ping to alert the user that a nudge arrived. Keep this
+  // host-level so we don't duplicate pings from other places.
+  try {
+    shell.beep();
+  } catch (e) {
+    console.debug('[Voice] shell.beep failed', e);
+  }
+
+  // On macOS some systems won't make an audible beep; attempt a stronger
+  // fallback by playing a short system sound if available.
+  if (process.platform === 'darwin') {
+    try {
+      // common system sounds: /System/Library/Sounds/Glass.aiff
+      const soundPath = '/System/Library/Sounds/Glass.aiff';
+      // spawn afplay asynchronously; don't await
+      spawn('afplay', [soundPath]);
+    } catch (e) {
+      console.debug('[Voice] macOS afplay fallback failed', e);
+    }
+  }
+
+  // Fire off TTS according to the user's settings. This returns immediately.
   void speakNudge(finalPayload.message, settings);
   return true;
 }
@@ -338,21 +359,22 @@ async function checkDistractionDrift(
   }
 
   const consecutiveSec = (now - session.distractionStartTime) / 1000;
-  if (consecutiveSec < 0) return; // demo: 1m30s — raise to 180+ for production
+  if (consecutiveSec < 0) return; // defensive
 
   const windowStart = now - 10 * 60 * 1000;
   const history = session.distractionHistory[appName] ?? [];
-  const recentOccurrences = history.filter((t) => t >= windowStart).length;
 
-  // Record this occurrence (pruning old entries first) and reset timer so it only fires once per 60s-stretch
-  session.distractionHistory[appName] = [
-    ...history.filter((t) => t >= windowStart),
-    now,
-  ];
-  session.distractionStartTime = now;
+  // Prune old entries and append this occurrence if it's a new distinct occurrence
+  const pruned = history.filter((t) => t >= windowStart);
+  // Only append if the last recorded occurrence was more than 60s ago to avoid spamming
+  const last = pruned.length ? pruned[pruned.length - 1] : 0;
+  if (now - last > 60 * 1000) pruned.push(now);
+  session.distractionHistory[appName] = pruned;
 
-  if (recentOccurrences >= 2) {
-    // 3rd+ time (0-indexed: 2 prior + this one = 3rd)
+  const occurrences = pruned.length;
+
+  // If this is a repeated distraction (3+ occurrences in the window) escalate messaging
+  if (occurrences >= 3) {
     await fireNudge({
       type: "distraction-firm",
       tier: 2,
@@ -361,7 +383,7 @@ async function checkDistractionDrift(
       context: {
         appName,
         driftDurationSec: Math.round(consecutiveSec),
-        occurrences: recentOccurrences + 1,
+        occurrences,
         ...sessionContext(),
       },
     });
@@ -374,7 +396,7 @@ async function checkDistractionDrift(
       context: {
         appName,
         driftDurationSec: Math.round(consecutiveSec),
-        occurrences: recentOccurrences + 1,
+        occurrences,
         ...sessionContext(),
       },
     });
@@ -385,12 +407,30 @@ async function checkStuckDrift(now: number) {
   if (!session) return;
   const windowStart = now - 5 * 60 * 1000;
   const recent = session.switchLog.filter((s) => s.timestamp >= windowStart);
-  if (recent.length < 10) return;
+  // Need enough switches to consider this a cycling behavior
+  if (recent.length < 6) return;
 
-  const distractionCount = recent.filter(
-    (s) => s.category === "distraction",
-  ).length;
+  const distractionCount = recent.filter((s) => s.category === "distraction").length;
   if (distractionCount / recent.length > 0.2) return;
+
+  // Build a compact sequence of categories (remove consecutive duplicates)
+  const seq: WindowCategory[] = [];
+  for (const s of recent) {
+    if (seq.length === 0 || seq[seq.length - 1] !== s.category) seq.push(s.category);
+  }
+
+  // Count alternations between focus and non-focus that indicate cycling
+  let alternations = 0;
+  for (let i = 0; i + 1 < seq.length; i++) {
+    const a = seq[i];
+    const b = seq[i + 1];
+    if ((a === 'focus' && (b === 'research' || b === 'unknown')) || (b === 'focus' && (a === 'research' || a === 'unknown'))) {
+      alternations++;
+    }
+  }
+
+  // If we see 3 or more alternations within the window, consider it stuck
+  if (alternations < 3) return;
 
   const fired = await fireNudge({
     type: "stuck-helpful",
@@ -683,15 +723,8 @@ function endSession() {
   const endedSession = session;
   if (endedSession.pollTimer) clearInterval(endedSession.pollTimer);
   if (endedSession.endTimer) clearTimeout(endedSession.endTimer);
-<<<<<<< HEAD
-  if (titleSettleTimer) {
-    clearTimeout(titleSettleTimer);
-    titleSettleTimer = null;
-  }
-=======
   if (titleSettleTimer) { clearTimeout(titleSettleTimer); titleSettleTimer = null; }
   void stopNudgeSpeech();
->>>>>>> 6aa41db (refactor(new elevenlabs))
   session = null;
 
   void (async () => {
@@ -885,13 +918,36 @@ function registerIPC() {
       },
     };
     const payload = fallbacks[type] ?? fallbacks["in-app"];
-    const isInterrupt =
-      payload.driftType === "distraction" || payload.driftType === "stuck";
-    if (isInterrupt) {
-      showInterruptNudge(payload);
-    } else {
-      showCheckinNudge(mainWindow, payload);
+
+    // If there's no active session, fall back to the old debug behavior that
+    // directly shows the nudge window + plays sound so devs can test without
+    // starting a session. If a session exists, route through fireNudge so
+    // the normal pipeline (cooldowns, logs, TTS) is used.
+    if (!session) {
+      const isInterrupt =
+        payload.driftType === "distraction" || payload.driftType === "stuck";
+      console.debug('[DEBUG_NUDGE] no session — showing debug nudge directly', payload.type);
+      if (isInterrupt) {
+        showInterruptNudge(payload);
+      } else {
+        if (mainWindow && !mainWindow.isDestroyed()) showCheckinNudge(mainWindow, payload);
+      }
+
+      try { shell.beep(); } catch { /* ignore */ }
+      if (process.platform === 'darwin') {
+        try { spawn('afplay', ['/System/Library/Sounds/Glass.aiff']); } catch { /* ignore */ }
+      }
+
+      // attempt speech according to current settings (may be disabled)
+      void speakNudge(payload.message, settings);
+      return;
     }
+
+    // Use the same fireNudge pipeline so debug nudges honor cooldowns, TTS,
+    // and logging just like real drift events when a session exists.
+    void fireNudge(payload).catch((err) =>
+      console.error('[DEBUG_NUDGE] failed to fire nudge:', err),
+    );
   });
 }
 
@@ -932,7 +988,7 @@ const createWindow = () => {
     );
   }
 
-  // mainWindow.webContents.openDevTools();
+  mainWindow.webContents.openDevTools();
   mainWindow.on("closed", () => {
     mainWindow = null;
   });

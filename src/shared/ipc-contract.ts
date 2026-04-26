@@ -183,7 +183,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   driftThreshold: 7,
   inactivityThreshold: 30, // demo: 1m30s — raise to 300 (5min) for production
   nudgeEnabled: true,
-  voiceEnabled: false,
+  voiceEnabled: true,
   personality: 'supportive',
   opacity: 0.9,
   accentColor: "teal",
