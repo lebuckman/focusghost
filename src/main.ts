@@ -213,8 +213,6 @@ let settings: AppSettings = {
   ...DEFAULT_SETTINGS,
   ...(store.get("settings") as Partial<AppSettings> | undefined),
 };
-// Always apply the demo inactivity threshold regardless of what's cached in the store
-settings.inactivityThreshold = DEFAULT_SETTINGS.inactivityThreshold;
 let mainWindow: BrowserWindow | null = null;
 let titleSettleTimer: ReturnType<typeof setTimeout> | null = null;
 let preCheckinHeight = 620;

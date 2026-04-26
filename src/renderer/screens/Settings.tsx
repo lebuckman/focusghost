@@ -185,14 +185,15 @@ export default function Settings({ settings, onBack, onChange }: Props) {
           </div>
         </div>
 
-        {/* Drift threshold */}
+        {/* Inactivity timeout */}
         <div style={{ marginBottom: 18 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <div style={{ fontSize: 12, color: '#e5e5e5' }}>drift threshold</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+            <div style={{ fontSize: 12, color: '#e5e5e5' }}>inactivity timeout</div>
             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: accent, fontVariantNumeric: 'tabular-nums' }}>
               {thresholdMin} min
             </div>
           </div>
+          <div style={{ fontSize: 10, color: '#737373', marginBottom: 8 }}>marks you as inactive if no window changes for this long</div>
           <input
             type="range" min={1} max={10} value={thresholdMin}
             onChange={e => onChange({ inactivityThreshold: Number(e.target.value) * 60 })}
@@ -200,11 +201,11 @@ export default function Settings({ settings, onBack, onChange }: Props) {
           />
         </div>
 
-        {/* Proactive insights */}
+        {/* Nudges enabled */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: 12, color: '#e5e5e5' }}>proactive insights</div>
-            <div style={{ fontSize: 10, color: '#737373', marginTop: 2 }}>ghost shares patterns it notices mid-session</div>
+            <div style={{ fontSize: 12, color: '#e5e5e5' }}>nudges</div>
+            <div style={{ fontSize: 10, color: '#737373', marginTop: 2 }}>ghost speaks up when it detects distraction or drift</div>
           </div>
           <Toggle on={settings.nudgeEnabled} onChange={v => onChange({ nudgeEnabled: v })} accent={accent} />
         </div>
