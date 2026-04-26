@@ -12,6 +12,9 @@
 import type { SessionRecapPayload } from '../../shared/ipc-contract';
 import { BackboardClient } from 'backboard-sdk';
 
+import Store from 'electron-store';
+const store = new Store();
+
 /**
  * Represents a single drift event to be saved to memory.
  * Used to build patterns for future session context.
@@ -53,14 +56,24 @@ class BackboardService {
     try {
       this.client = new BackboardClient({ apiKey: this.apiKey });
 
-      // Create or retrieve assistant (represents user's memory context)
-      // For hackathon MVP, create a new assistant per session
-      // Production: could retrieve by deviceId to persist across restarts
-      const assistant = await this.client.createAssistant({
-        name: 'FocusGhost Memory',
-        description: 'Persistent memory of user focus patterns and drift behavior',
-      });
-      this.assistantId = assistant.assistantId;
+      // Reuse existing assistant if we've run before, otherwise create a new one
+      const existingId = store.get('backboardAssistantId') as string | undefined;
+
+      if (existingId) {
+        this.assistantId = existingId;
+        console.log('[Backboard] Reusing existing assistant:', this.assistantId);
+      } else {
+        // Create or retrieve assistant (represents user's memory context)
+        // For hackathon MVP, create a new assistant per session
+        // Production: could retrieve by deviceId to persist across restarts
+        const assistant = await this.client.createAssistant({
+          name: 'FocusGhost Memory',
+          description: 'Persistent memory of user focus patterns and drift behavior',
+        });
+        this.assistantId = assistant.assistantId;
+        store.set('backboardAssistantId', this.assistantId);
+        console.log('[Backboard] Created new assistant:', this.assistantId);
+      }
 
       // Create a thread for this session
       const thread = await this.client.createThread(this.assistantId);
@@ -82,27 +95,24 @@ class BackboardService {
    * @returns Plain text context string summarizing historical patterns
    */
   async getBackboardContext(deviceId: string, sessionTask?: string): Promise<string> {
-    if (!this.initialized || !this.client || !this.threadId) {
-      console.warn('[Backboard] Not initialized; returning empty context');
-      return '';
-    }
+    if (!this.initialized || !this.client || !this.assistantId) return '';
+
 
     try {
-      // Query the thread history to extract patterns
-      // Backboard's "Auto" memory extracts key patterns automatically
-      const response = await this.client.addMessage(this.threadId, {
-        content: `Summarize the user's focus patterns, distraction patterns, and recovery habits in 3-4 bullet points. Current task: "${sessionTask}". Keep it brief and specific.`,
-        memory: 'Auto', // Backboard auto-extracts patterns
-        stream: false,
-      });
+      const result = await this.client.getMemories(this.assistantId, { page: 1, pageSize: 50});
+      if (!result || !result.memories || result.memories.length === 0) return '';
 
-      if (!('content' in response)) {
-        throw new Error('Expected non-streaming response');
-      }
+      const sorted = [...result.memories].sort(
+        (a: { createdAt: string }, b: { createdAt: string }) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
 
-      // The response includes Backboard's memory-enhanced context
-      const context = response.content || 'No historical patterns found yet.';
-      console.log('[Backboard] Context retrieved:', context.substring(0, 100));
+      const context = [
+        `User's past session history (${sorted.length} sessions):`,
+        ...sorted.map((m: { content: string }) => `- ${m.content}`)
+      ].join('\n');
+
+      console.log('[Backboard] Context retrieved:\n', context);
       return context;
 
     } catch (error) {
@@ -119,7 +129,7 @@ class BackboardService {
    * @param recap - Session recap data to persist
    */
   async saveSessionMemory(deviceId: string, recap: SessionRecapPayload): Promise<void> {
-    if (!this.initialized || !this.client || !this.threadId) {
+    if (!this.initialized || !this.client || !this.assistantId) {
       console.warn('[Backboard] Not initialized; session memory not saved');
       return;
     }
@@ -134,23 +144,10 @@ class BackboardService {
       const topDriftApp = recap.appBreakdown
         .find(a => a.category === 'distraction')?.app || 'none';
 
-      const sessionMessage = `
-SESSION COMPLETED:
-- Task: "${recap.task}"
-- Duration: ${recap.durationMin} minutes
-- Focus Rate: ${focusPct}%
-- Total Switches: ${recap.totalSwitches}
-- Top Distraction: ${topDriftApp}
-- Nudges Received: ${recap.nudgesReceived}
-- AI Insight: ${recap.insight}
-`;
+      const content = `Session on task "${recap.task}": ${recap.durationMin} min, ${focusPct}% focus, ${recap.totalSwitches} switches, top distraction: ${topDriftApp}, nudges: ${recap.nudgesReceived}.`;
 
       // Add to thread with memory enabled
-      await this.client.addMessage(this.threadId, {
-        content: sessionMessage.trim(),
-        memory: 'Auto', // Backboard extracts patterns
-        stream: false,
-      });
+      await this.client.addMemory(this.assistantId, { content });
 
       console.log('[Backboard] Session memory saved:', {
         task: recap.task,
@@ -173,32 +170,20 @@ SESSION COMPLETED:
    * @param event - The drift event details
    */
   async saveDriftMemory(deviceId: string, event: DriftEvent): Promise<void> {
-    if (!this.initialized || !this.client || !this.threadId) {
+    if (!this.initialized || !this.client || !this.assistantId) {
       console.warn('[Backboard] Not initialized; drift memory not saved');
       return;
     }
 
     try {
-      const driftMessage = `
-DRIFT DETECTED:
-- Type: ${event.type}
-- App: ${event.app || 'unknown'}
-- During Task: "${event.sessionTask}"
-- Recovery Time: ${event.recoveryTime ? `${event.recoveryTime}s` : 'ongoing'}
-- User Action: ${event.userResponded || 'no response yet'}
-`;
+      const content = `Drift during "${event.sessionTask}": type=${event.type}, app=${event.app || 'unknown'}, recovery=${event.recoveryTime ? `${event.recoveryTime}s` : 'ongoing'}, response=${event.userResponded || 'none'}.`;
 
       // Add to thread with memory enabled
-      await this.client.addMessage(this.threadId, {
-        content: driftMessage.trim(),
-        memory: 'Auto',
-        stream: false,
-      });
-
+      await this.client.addMemory(this.assistantId, { content });
+ 
       console.log('[Backboard] Drift event saved:', {
         type: event.type,
         app: event.app,
-        recoveryTime: event.recoveryTime,
       });
 
     } catch (error) {
@@ -247,6 +232,7 @@ export async function getBackboardContext(deviceId: string, sessionTask?: string
  * Called by Person 1 when endSession() fires.
  */
 export async function saveSessionMemory(deviceId: string, recap: SessionRecapPayload): Promise<void> {
+  console.log('[Backboard] saveSessionMemory called for task:', recap.task);
   const service = getBackboardService();
   return service.saveSessionMemory(deviceId, recap);
 }
