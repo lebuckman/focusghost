@@ -5,6 +5,7 @@ import { IPC } from '../../shared/ipc-contract';
 
 interface Props {
   task: string;
+  trigger?: string;
   onBack: () => void;
 }
 
@@ -16,7 +17,7 @@ function relativeTime(timestamp: number): string {
   return `${Math.floor(m / 60)}h ago`;
 }
 
-export default function GhostChat({ task, onBack }: Props) {
+export default function GhostChat({ task, trigger, onBack }: Props) {
   const [chatHistory, setChatHistory] = useState<ChatEntry[]>([]);
   const [input, setInput]             = useState('');
   const [isThinking, setIsThinking]   = useState(false);
@@ -30,7 +31,9 @@ export default function GhostChat({ task, onBack }: Props) {
       greeted.current = true;
       const greeting: ChatEntry = {
         role: 'ghost',
-        content: `hey — i'm here while you work on "${task}". i'll stay quiet unless something changes.`,
+        content: trigger === 'stuck'
+          ? `looks like you might be stuck on "${task}" — what's blocking you? (syntax error, logic issue, or just not sure where to start?)`
+          : `hey — i'm here while you work on "${task}". i'll stay quiet unless something changes.`,
         timestamp: Date.now(),
       };
       setChatHistory([greeting]);
@@ -97,6 +100,21 @@ export default function GhostChat({ task, onBack }: Props) {
         className="fg-scroll"
         style={{ flex: 1, overflowY: 'auto', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}
       >
+        {trigger === 'stuck' && (
+          <div style={{
+            background: 'rgba(250,204,21,0.06)',
+            border: '0.5px solid rgba(250,204,21,0.25)',
+            borderRadius: 8,
+            padding: '10px 12px',
+          }}>
+            <div style={{ fontSize: 10, color: '#facc15', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 4 }}>
+              ↳ stuck mode activated
+            </div>
+            <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.4 }}>
+              tell me what's snagging you and we'll work through it.
+            </div>
+          </div>
+        )}
         {chatHistory.map((msg, i) =>
           msg.role === 'user' ? (
             <UserBubble key={i} entry={msg} />

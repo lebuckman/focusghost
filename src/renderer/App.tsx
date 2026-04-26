@@ -5,7 +5,7 @@ import GhostChat       from './screens/GhostChat';
 import SessionRecap    from './screens/SessionRecap';
 import NudgePopup from './components/NudgePopup';
 import NudgeView  from './screens/NudgeView';
-import type { SessionRecapPayload, NudgePayload, SessionUpdate } from '../shared/ipc-contract';
+import type { SessionRecapPayload, NudgePayload, SessionUpdate, OpenGhostChatPayload } from '../shared/ipc-contract';
 import { MOCK_SESSION_UPDATE, IPC } from '../shared/ipc-contract';
 
 const isNudgeView = new URLSearchParams(window.location.search).get('view') === 'nudge';
@@ -18,13 +18,30 @@ export default function App() {
   const [activeTask, setActiveTask] = useState('');
   const [activeMins, setActiveMins] = useState(30);
   const [nudge,      setNudge]      = useState<NudgePayload | null>(null);
-  const [sessionUpdate, setSessionUpdate] = useState<SessionUpdate>(MOCK_SESSION_UPDATE);
+  const [chatTrigger, setChatTrigger] = useState<string | undefined>(undefined);
+  const [sessionUpdate, setSessionUpdate] = useState<SessionUpdate>({
+    currentApp: '',
+    currentAppProcess: '',
+    currentAppBundle: '',
+    currentAppTitle: '',
+    category: 'unknown',
+    switchCount: 0,
+    elapsedSec: 0,
+    focusSec: 0,
+    driftSec: 0,
+    ghostState: 'calm',
+    recentSwitches: [],
+  });
 
   useEffect(() => {
     if (isNudgeView) return; // NudgeView handles its own IPC
     window.electronAPI.onNudge((d) => setNudge(d as NudgePayload));
     window.electronAPI.onNudgeDismissed(() => setNudge(null));
-    window.electronAPI.onOpenGhostChat(() => setScreen('chat'));
+    window.electronAPI.onOpenGhostChat((d) => {
+      const payload = d as OpenGhostChatPayload;
+      setChatTrigger(payload?.trigger);
+      setScreen('chat');
+    });
     window.electronAPI.onSessionUpdate((d) => setSessionUpdate(d as SessionUpdate));
     window.electronAPI.onSessionRecap((d) => {
       setRecap(d as SessionRecapPayload);
@@ -44,7 +61,7 @@ export default function App() {
     setNudge(null);
   };
 
-  const openChat = () => setScreen('chat');
+  const openChat = () => { setChatTrigger(undefined); setScreen('chat'); };
 
   const remainingSec = Math.max(0, activeMins * 60 - sessionUpdate.elapsedSec);
 
@@ -73,7 +90,8 @@ export default function App() {
       {screen === 'chat' && (
         <GhostChat
           task={activeTask}
-          onBack={() => setScreen('session')}
+          trigger={chatTrigger}
+          onBack={() => { setChatTrigger(undefined); setScreen('session'); }}
         />
       )}
       {screen === 'recap' && recap && (

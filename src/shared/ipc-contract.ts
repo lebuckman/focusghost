@@ -64,6 +64,8 @@ export interface NudgePayload {
     investedSec?: number;
     remainingSec?: number;
     occurrences?: number;
+    streakDays?: number;
+    blockUntil?: number;
   };
 }
 export interface OpenGhostChatPayload { trigger: DriftType; }
@@ -113,8 +115,8 @@ export interface AppStore {
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  driftThreshold: 4,
-  inactivityThreshold: 300,
+  driftThreshold: 7,
+  inactivityThreshold: 90, // demo: 1m30s — raise to 300 (5min) for production
   nudgeEnabled: true,
   voiceEnabled: false,
   opacity: 0.9,

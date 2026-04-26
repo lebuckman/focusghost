@@ -8,7 +8,7 @@ interface Props {
   investedSec: number;
   remainingSec: number;
   onDismiss: () => void;
-  onStuck: () => void;
+  onStuck: (reason?: string) => void;
   onEndSession: () => void;
 }
 
@@ -184,7 +184,7 @@ function StuckHelpful({ nudge, onDismiss, onStuck }: Props) {
             {chips.map(t => (
               <button
                 key={t}
-                onClick={onStuck}
+                onClick={() => onStuck(t)}
                 style={{
                   background: 'transparent',
                   border: '1px solid rgba(255,255,255,0.15)',
@@ -203,7 +203,7 @@ function StuckHelpful({ nudge, onDismiss, onStuck }: Props) {
 
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <Btn onClick={onDismiss}>not now</Btn>
-          <Btn primary accent="#facc15" onClick={onStuck}>chat with ghost</Btn>
+          <Btn primary accent="#facc15" onClick={() => onStuck('chat_with_ghost')}>chat with ghost</Btn>
         </div>
       </div>
     </PopupShell>
@@ -211,11 +211,16 @@ function StuckHelpful({ nudge, onDismiss, onStuck }: Props) {
 }
 
 function IdleSoft({ nudge, onDismiss, onEndSession }: Props) {
-  const [countdown, setCountdown] = useState(42);
+  const initialSec = nudge.context?.remainingSec ?? 120; // demo: 2min before auto-pause — restore to lower for production
+  const [countdown, setCountdown] = useState(initialSec);
   useEffect(() => {
-    const t = setInterval(() => setCountdown(c => Math.max(0, c - 1)), 1000);
+    setCountdown(nudge.context?.remainingSec ?? 120);
+    const t = setInterval(() => setCountdown(c => {
+      if (c <= 1) { clearInterval(t); onEndSession(); return 0; }
+      return c - 1;
+    }), 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [nudge]);
 
   return (
     <PopupShell accent="#a3a3a3">
@@ -326,6 +331,16 @@ export function NudgeContent(props: Props) {
     case 'idle-soft':             return <IdleSoft {...props} />;
     case 'milestone-positive':    return <MilestonePositive {...props} />;
     case 'pattern-observational': return <PatternObservational {...props} />;
+    case 'in-app':
+      console.warn('[NudgePopup] in-app nudge rendered as popup — should be inline only', props.nudge);
+      return (
+        <PopupShell>
+          <div style={{ padding: '24px', fontSize: 14, color: '#d4d4d4', lineHeight: 1.5 }}>
+            {props.nudge.message}
+            <div style={{ marginTop: 12 }}><Btn onClick={props.onDismiss}>got it</Btn></div>
+          </div>
+        </PopupShell>
+      );
     default:                      return null;
   }
 }

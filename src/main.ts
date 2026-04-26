@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, powerMonitor } from 'electron';
 import { extractTabTitle } from './main/get-browser-tab';
 import { showInterruptNudge, closeNudgeWindow, isNudgeWindowOpen } from './main/nudge-window';
 import path from 'path';
@@ -50,7 +50,7 @@ const DISTRACTION_BUNDLES = new Set([
   'com.hnc.Discord', 'com.spotify.client', 'com.apple.TV',
   'com.facebook.archon', 'com.tinyspeck.slackmacgap',
 ]);
-const DISTRACTION_NAME_RE = /youtube|netflix|twitch|tiktok|instagram|twitter|x\.com|reddit|steam|epicgames/i;
+const DISTRACTION_NAME_RE = /youtube|netflix|twitch|tiktok|instagram|twitter|x\.com|reddit|steam|epicgames|discord/i;
 const RESEARCH_BUNDLES = new Set([
   'com.google.Chrome', 'org.mozilla.firefox', 'com.apple.Safari',
   'com.microsoft.edgemac', 'com.brave.Browser', 'com.operasoftware.Opera',
@@ -95,7 +95,7 @@ interface SessionState {
 }
 
 let session: SessionState | null = null;
-let settings: AppSettings = (store.get('settings') as AppSettings | undefined) ?? DEFAULT_SETTINGS;
+let settings: AppSettings = { ...DEFAULT_SETTINGS, ...(store.get('settings') as Partial<AppSettings> | undefined) };
 let mainWindow: BrowserWindow | null = null;
 let titleSettleTimer: ReturnType<typeof setTimeout> | null = null;
 let preCheckinHeight = 620;
@@ -120,12 +120,13 @@ function deriveGhostState(category: WindowCategory, driftSec: number): GhostMasc
 // ── Nudge helpers ─────────────────────────────────────────────────────────────
 
 const NUDGE_COOLDOWNS: Record<string, number> = {
-  'in-app':                3 * 60 * 1000,
-  'distraction-firm':      5 * 60 * 1000,
-  'distraction-hard':      5 * 60 * 1000,
-  'stuck-helpful':        10 * 60 * 1000,
-  'idle-soft':            10 * 60 * 1000,
-  'pattern-observational':10 * 60 * 1000,
+  // demo: short cooldowns for testability — restore to 3/5/5/10/10/10 min for production
+  'in-app':                30 * 1000,
+  'distraction-firm':      60 * 1000,
+  'distraction-hard':      60 * 1000,
+  'stuck-helpful':         90 * 1000,
+  'idle-soft':             90 * 1000,
+  'pattern-observational': 90 * 1000,
   'milestone-positive':    Infinity,
 };
 
@@ -154,6 +155,8 @@ async function fireNudge(payload: NudgePayload): Promise<boolean> {
   if (!session) return false;
   const isInterrupt = payload.driftType === 'distraction' || payload.driftType === 'stuck';
   if (!isInterrupt && !mainWindow) return false;
+  // Don't overwrite a nudge that's currently visible — user hasn't dismissed it yet
+  if (isInterrupt && isNudgeWindowOpen()) return false;
   const now = Date.now();
   const cooldownExpiry = session.nudgeCooldownUntil[payload.type];
   if (cooldownExpiry !== undefined && now < cooldownExpiry) return false;
@@ -175,6 +178,12 @@ async function fireNudge(payload: NudgePayload): Promise<boolean> {
 
 // ── Drift detection ───────────────────────────────────────────────────────────
 
+async function checkFrequencyDrift(_now: number) {
+  // Frequency data is tracked via session.switchLog/switchCount for stats.
+  // No popup is fired — the inline in-app nudge component isn't wired yet,
+  // and distraction/stuck nudges cover the meaningful drift cases.
+  void _now;
+}
 
 async function checkDistractionDrift(appName: string, category: WindowCategory, now: number) {
   if (!session) return;
@@ -190,14 +199,14 @@ async function checkDistractionDrift(appName: string, category: WindowCategory, 
   }
 
   const consecutiveSec = (now - session.distractionStartTime) / 1000;
-  if (consecutiveSec < 60) return;
+  if (consecutiveSec < 90) return; // demo: 1m30s — raise to 180+ for production
 
   const windowStart = now - 10 * 60 * 1000;
   const history = session.distractionHistory[appName] ?? [];
   const recentOccurrences = history.filter(t => t >= windowStart).length;
 
-  // Record this occurrence and reset timer so it only fires once per 60s-stretch
-  session.distractionHistory[appName] = [...history, now];
+  // Record this occurrence (pruning old entries first) and reset timer so it only fires once per 60s-stretch
+  session.distractionHistory[appName] = [...history.filter(t => t >= windowStart), now];
   session.distractionStartTime = now;
 
   if (recentOccurrences >= 2) {
@@ -224,7 +233,7 @@ async function checkStuckDrift(now: number) {
   if (!session) return;
   const windowStart = now - 5 * 60 * 1000;
   const recent = session.switchLog.filter(s => s.timestamp >= windowStart);
-  if (recent.length < 6) return;
+  if (recent.length < 10) return;
 
   const distractionCount = recent.filter(s => s.category === 'distraction').length;
   if (distractionCount / recent.length > 0.2) return;
@@ -249,13 +258,14 @@ async function checkStuckDrift(now: number) {
   }
 }
 
-async function checkInactivity(now: number) {
+async function checkInactivity(_now: number) {
   if (!session) return;
-  if (now - session.lastAppChangeTime >= settings.inactivityThreshold * 1000) {
+  const idleSec = powerMonitor.getSystemIdleTime();
+  if (idleSec >= settings.inactivityThreshold) {
     await fireNudge({
       type: 'idle-soft',
       tier: 2,
-      message: `still there? no window movement for ${Math.round(settings.inactivityThreshold / 60)} minutes.`,
+      message: `still there? no activity for ${Math.round(idleSec / 60)} minutes.`,
       driftType: 'distraction',
     });
   }
@@ -264,6 +274,7 @@ async function checkInactivity(now: number) {
 async function checkMilestone(now: number) {
   if (!session) return;
   if (session.milestonesFired.has('25min')) return;
+  if (session.lastCategory !== 'focus') return;
   if (now - session.lastSwitchTime >= 25 * 60 * 1000) {
     session.milestonesFired.add('25min');
     await fireNudge({
@@ -277,20 +288,46 @@ async function checkMilestone(now: number) {
 
 // ── Poll loop ─────────────────────────────────────────────────────────────────
 
+function buildSessionUpdate(elapsedSec: number, appName: string, bundleId: string, title: string, displayName: string, category: WindowCategory): SessionUpdate {
+  if (!session) throw new Error('no session');
+  return {
+    currentApp: displayName,
+    currentAppProcess: appName,
+    currentAppBundle: bundleId,
+    currentAppTitle: title,
+    category,
+    switchCount: session.switchCount,
+    elapsedSec,
+    focusSec: session.focusSec,
+    driftSec: session.driftSec,
+    ghostState: deriveGhostState(category, session.driftSec),
+    recentSwitches: session.switchLog.slice(-5).reverse(),
+  };
+}
+
 async function pollActiveWindow() {
   if (!session || !mainWindow) return;
+  const now = Date.now();
+  const elapsedSec = Math.floor((now - session.startTime) / 1000);
+
   try {
     const win = await getActiveWin() as { owner: { name: string; bundleId?: string }; title?: string } | undefined;
-    if (!win) return;
+
+    if (!win) {
+      // No focused window — still advance the timer so the UI doesn't freeze
+      mainWindow.webContents.send(IPC.SESSION_UPDATE, buildSessionUpdate(
+        elapsedSec, session.lastApp, '', '', session.lastDisplayName, session.lastCategory,
+      ));
+      return;
+    }
 
     const appName = win.owner.name;
     const bundleId = win.owner.bundleId ?? '';
     const title = win.title ?? '';
     const displayName = extractTabTitle(title, appName);
-    const now = Date.now();
-    const elapsedSec = Math.floor((now - session.startTime) / 1000);
 
-    let category = categorize(appName, bundleId, title);
+    const trueCategory = categorize(appName, bundleId, title);
+    let category = trueCategory;
 
     // For browsers: use extracted tab title; for everything else (Discord, etc.): use raw OS title.
     // This lets us detect both browser tab switches and Discord channel switches via one comparison.
@@ -329,7 +366,8 @@ async function pollActiveWindow() {
         session.switchCount += 1;
         session.lastAppChangeTime = t;
         session.lastSwitchTime = t;
-        session.distractionStartTime = null;
+        // Don't reset distractionStartTime here — channel switches within Discord shouldn't
+        // restart the 90s distraction accumulation. checkDistractionDrift handles resets.
       }, 1500);
     }
 
@@ -345,24 +383,13 @@ async function pollActiveWindow() {
       session.driftSec += 2;
     }
 
-    const update: SessionUpdate = {
-      currentApp: displayName,
-      currentAppProcess: appName,
-      currentAppBundle: bundleId,
-      currentAppTitle: title,
-      category,
-      switchCount: session.switchCount,
-      elapsedSec,
-      focusSec: session.focusSec,
-      driftSec: session.driftSec,
-      ghostState: deriveGhostState(category, session.driftSec),
-      recentSwitches: session.switchLog.slice(-5).reverse(),
-    };
-
-    mainWindow.webContents.send(IPC.SESSION_UPDATE, update);
+    mainWindow.webContents.send(IPC.SESSION_UPDATE, buildSessionUpdate(
+      elapsedSec, appName, bundleId, title, displayName, category,
+    ));
 
     if (settings.nudgeEnabled) {
-      await checkDistractionDrift(appName, category, now);
+      await checkFrequencyDrift(now);
+      await checkDistractionDrift(appName, trueCategory, now);
       await checkStuckDrift(now);
       await checkInactivity(now);
       await checkMilestone(now);
@@ -378,7 +405,12 @@ async function pollActiveWindow() {
       chatHistory: session.chatHistory,
     });
   } catch {
-    // active-win throws if no window is focused or on permission error — ignore
+    // active-win throws on permission error — still advance the timer
+    if (session && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(IPC.SESSION_UPDATE, buildSessionUpdate(
+        elapsedSec, session.lastApp, '', '', session.lastDisplayName, session.lastCategory,
+      ));
+    }
   }
 }
 
