@@ -648,14 +648,7 @@ function buildRecap(currentSession: SessionState): SessionRecapPayload {
     currentSession.focusSec + currentSession.driftSec,
   );
   const focusPct = Math.round((currentSession.focusSec / totalSec) * 100);
-  let insight: string;
-  if (focusPct >= 80) {
-    insight = `Strong session - you stayed focused ${focusPct}% of the time on "${currentSession.task}". Keep that streak going.`;
-  } else if (focusPct >= 60) {
-    insight = `Decent focus at ${focusPct}% on "${currentSession.task}". A few drifts but you pulled back. Try closing distracting tabs before the next session.`;
-  } else {
-    insight = `Tough one - only ${focusPct}% focus time. Identify what pulled you away from "${currentSession.task}" and eliminate it before the next session.`;
-  }
+  
 
   return {
     task: currentSession.task,
@@ -666,7 +659,7 @@ function buildRecap(currentSession: SessionState): SessionRecapPayload {
     nudgesReceived: currentSession.nudgeLog.length,
     nudgesDismissedAsBreak: 0,
     appBreakdown,
-    insight,
+    insight: "",
     switchLog: currentSession.switchLog,
   };
 }
