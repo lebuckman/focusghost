@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 import { app, BrowserWindow, ipcMain, powerMonitor } from 'electron';
 import { extractTabTitle } from './main/get-browser-tab';
 import { showInterruptNudge, closeNudgeWindow, isNudgeWindowOpen } from './main/nudge-window';
@@ -23,9 +25,11 @@ import {
   type OpenGhostChatPayload,
 } from './shared/ipc-contract';
 import {
+  initializeAIOrchestrator,
   generateChatResponse,
   generateInsight,
   generateNudgeMessage,
+  recordSessionMemory,
 } from './main/ai/aiOrchestrator';
 
 if (started) app.quit();
@@ -485,6 +489,8 @@ function endSession() {
     const history = ((store.get('sessionHistory') as SessionRecapPayload[] | undefined) ?? []);
     store.set('sessionHistory', [...history, recap].slice(-50));
     store.delete('currentSession');
+    void recordSessionMemory(recap);
+
 
     mainWindow?.webContents.send(IPC.SESSION_RECAP, recap);
   })();
@@ -642,7 +648,8 @@ const createWindow = () => {
   });
 };
 
-app.on("ready", () => {
+app.on("ready", async () => {
+  await initializeAIOrchestrator();
   registerIPC();
   createWindow();
 });
