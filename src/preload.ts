@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   requestGhostChat:   (reason?: string)             => ipcRenderer.invoke(IPC.REQUEST_GHOST_CHAT, reason),
   snoozeNudge:        (appName?: string)             => ipcRenderer.invoke(IPC.SNOOZE_NUDGE, appName),
   blockApp:           (appName: string, until: number) => ipcRenderer.invoke(IPC.BLOCK_APP, appName, until),
+  classifyCorrection: (p: unknown)                 => ipcRenderer.invoke(IPC.CLASSIFY_CORRECTION, p),
   setWindowDim:       (d: boolean)                 => ipcRenderer.invoke(IPC.SET_WINDOW_DIM, d),
   platform:           process.platform,
 });

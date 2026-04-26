@@ -63,6 +63,15 @@ input, textarea {
   50%       { opacity: 0; }
 }
 
+/* Insight loading shimmer */
+@keyframes insightShimmer {
+  0%, 100% { opacity: 0.35; }
+  50%       { opacity: 0.65; }
+}
+.insight-shimmer {
+  animation: insightShimmer 1.4s ease-in-out infinite;
+}
+
 /* Chat animations */
 @keyframes pulseDot {
   0%, 100% { opacity: 0.4; }

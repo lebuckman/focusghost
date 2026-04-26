@@ -23,6 +23,7 @@ export const IPC = {
   REQUEST_GHOST_CHAT: "REQUEST_GHOST_CHAT",
   SNOOZE_NUDGE: "SNOOZE_NUDGE",
   BLOCK_APP: "BLOCK_APP",
+  CLASSIFY_CORRECTION: "CLASSIFY_CORRECTION",
 } as const;
 
 export type IPCChannel = (typeof IPC)[keyof typeof IPC];
@@ -41,7 +42,8 @@ export type NudgeType =
   | "idle-soft"
   | "pattern-observational"
   | "milestone-positive"
-  | "in-app";
+  | "in-app"
+  | "clarify";
 export type GhostMascotState =
   | "calm"
   | "concerned"
@@ -113,6 +115,12 @@ export interface NudgePayload {
     occurrences?: number;
     streakDays?: number;
     blockUntil?: number;
+    clarificationPayload?: {
+      isBrowser: boolean;
+      appName?: string;
+      siteName?: string;
+      titleKeywords: string[];
+    };
   };
 }
 export interface OpenGhostChatPayload {

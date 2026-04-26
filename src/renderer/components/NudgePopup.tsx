@@ -274,6 +274,37 @@ function MilestonePositive({ nudge, onDismiss, accent }: Props) {
   );
 }
 
+function Clarify({ nudge, onDismiss }: Props) {
+  const payload = nudge.context?.clarificationPayload;
+  const label = nudge.context?.appName ?? 'this page';
+
+  const markAs = (category: 'focus' | 'distraction') => {
+    if (payload) {
+      void window.electronAPI.classifyCorrection({ ...payload, category });
+    }
+    onDismiss();
+  };
+
+  return (
+    <PopupShell accent="#60a5fa">
+      <div style={{ padding: '28px 24px 24px' }}>
+        <div style={{ fontSize: 11, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 8 }}>quick check</div>
+        <div style={{ fontSize: 20, color: '#ffffff', fontWeight: 700, letterSpacing: '-0.01em', marginBottom: 8 }}>
+          is this part of your session?
+        </div>
+        <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, marginBottom: 20 }}>
+          <span style={{ color: '#e5e5e5', fontWeight: 500 }}>{label}</span> — {nudge.message}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Btn primary accent="#2dd4bf" onClick={() => markAs('focus')}>yes, count as focus</Btn>
+          <Btn onClick={() => markAs('distraction')}>no, it's a distraction</Btn>
+          <Btn onClick={onDismiss}>not now</Btn>
+        </div>
+      </div>
+    </PopupShell>
+  );
+}
+
 function PatternObservational({ nudge, onDismiss, onBlock, accent }: Props) {
   const appName = nudge.context?.appName ?? 'that app';
   const occurrences = nudge.context?.occurrences ?? 3;
@@ -334,6 +365,7 @@ export function NudgeContent(props: Props) {
     case 'idle-soft':             return <IdleSoft             {...props} />;
     case 'milestone-positive':    return <MilestonePositive    {...props} />;
     case 'pattern-observational': return <PatternObservational {...props} />;
+    case 'clarify':              return <Clarify               {...props} />;
     case 'in-app':
       console.warn('[NudgePopup] in-app nudge rendered as popup — should be inline only', props.nudge);
       return (
