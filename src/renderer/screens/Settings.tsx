@@ -184,15 +184,6 @@ export default function Settings({ settings, onBack, onChange }: Props) {
             })}
           </div>
         </div>
-        
-        {/* Nudges enabled */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: 12, color: '#e5e5e5' }}>nudges</div>
-            <div style={{ fontSize: 10, color: '#737373', marginTop: 2 }}>ghost speaks up when it detects distraction or drift</div>
-          </div>
-          <Toggle on={settings.nudgeEnabled} onChange={v => onChange({ nudgeEnabled: v })} accent={accent} />
-        </div>
 
         {/* Drift threshold */}
         <div style={{ marginBottom: 18 }}>
@@ -226,7 +217,7 @@ export default function Settings({ settings, onBack, onChange }: Props) {
         </div>
 
         {/* Proactive insights */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
           <div>
             <div style={{ fontSize: 12, color: '#e5e5e5' }}>proactive insights</div>
             <div style={{ fontSize: 10, color: '#737373', marginTop: 2 }}>ghost shares patterns it notices mid-session</div>
@@ -241,7 +232,7 @@ export default function Settings({ settings, onBack, onChange }: Props) {
         <SectionLabel>voice</SectionLabel>
         
         {/* Voice Enabled */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
           <div>
             <div style={{ fontSize: 12, color: '#e5e5e5' }}>voice enabled</div>
             <div style={{ fontSize: 10, color: '#737373', marginTop: 2 }}>ghost speaks up when you drift</div>
