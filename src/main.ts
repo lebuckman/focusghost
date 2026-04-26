@@ -605,11 +605,11 @@ async function pollActiveWindow() {
       category = "inactive";
     }
 
-    // Accumulate focus/drift in 2-second ticks
-    if (category === "focus" || category === "research") {
-      session.focusSec += 2;
-    } else if (category === "distraction") {
-      session.driftSec += 2;
+    // Accumulate focus/drift in 1-second ticks
+    if (category === 'focus' || category === 'research') {
+      session.focusSec += 1;
+    } else if (category === 'distraction') {
+      session.driftSec += 1;
     }
 
     mainWindow.webContents.send(
@@ -767,7 +767,7 @@ function registerIPC() {
       focusSec: 0,
       driftSec: 0,
       switchCount: 0,
-      pollTimer: setInterval(pollActiveWindow, 2000),
+      pollTimer: setInterval(pollActiveWindow, 1000),
       endTimer: setTimeout(endSession, payload.durationMin * 60 * 1000),
       lastAppChangeTime: now,
       lastSwitchTime: now,
@@ -845,9 +845,9 @@ function registerIPC() {
     }
   });
 
-  ipcMain.handle('GET_SETTINGS', () => ({ ...settings }));
+  ipcMain.handle(IPC.GET_SETTINGS, () => ({ ...settings }));
 
-  ipcMain.handle('SET_WINDOW_DIM', (_e, dimmed: boolean) => {
+  ipcMain.handle(IPC.SET_WINDOW_DIM, (_e, dimmed: boolean) => {
     mainWindow?.setOpacity(dimmed ? 0.8 : 1.0);
   });
 

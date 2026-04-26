@@ -20,6 +20,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   minimizeWindow:     ()                           => ipcRenderer.send('WINDOW_MINIMIZE'),
   collapseWindow:     ()                           => ipcRenderer.send('WINDOW_COLLAPSE'),
   expandWindow:       ()                           => ipcRenderer.send('WINDOW_EXPAND'),
-  getSettings:        ()                           => ipcRenderer.invoke('GET_SETTINGS'),
-  setWindowDim:       (d: boolean)                 => ipcRenderer.invoke('SET_WINDOW_DIM', d),
+  getSettings:        ()                           => ipcRenderer.invoke(IPC.GET_SETTINGS),
+  setWindowDim:       (d: boolean)                 => ipcRenderer.invoke(IPC.SET_WINDOW_DIM, d),
 });

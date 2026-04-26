@@ -245,20 +245,8 @@ function groupSwitches(switches: SwitchEntry[]): ActivityGroup[] {
 export default function ActiveSession({ task, durationMin, sessionUpdate, onOpenChat, onOpenSettings, collapsed, onCollapse, onExpand, accent }: Props) {
   const durationSec = durationMin * 60;
 
-  // Local 1-second tick so the countdown moves 1s at a time instead of jumping by 2
-  // every time the 2-second IPC poll fires.
-  const [localElapsed, setLocalElapsed] = useState(sessionUpdate.elapsedSec);
-  useEffect(() => {
-    // Sync when server sends a new value — never go backwards
-    setLocalElapsed(prev => Math.max(prev, sessionUpdate.elapsedSec));
-  }, [sessionUpdate.elapsedSec]);
-  useEffect(() => {
-    const id = setInterval(() => setLocalElapsed(s => s + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const remaining = Math.max(0, durationSec - localElapsed);
-  const progress = Math.min(1, localElapsed / Math.max(1, durationSec));
+  const remaining = Math.max(0, durationSec - sessionUpdate.elapsedSec);
+  const progress = Math.min(1, sessionUpdate.elapsedSec / Math.max(1, durationSec));
   const groups = groupSwitches(sessionUpdate.recentSwitches);
 
   const statusDotColor = sessionUpdate.category === 'focus' || sessionUpdate.category === 'research'
@@ -417,7 +405,7 @@ export default function ActiveSession({ task, durationMin, sessionUpdate, onOpen
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, padding: '12px 16px' }}>
         <MetricChip label="switches" value={sessionUpdate.switchCount} />
         <MetricChip label="focus"    value={fmtDuration(sessionUpdate.focusSec)} color="teal" />
-        <MetricChip label="drift"    value={fmtDuration(sessionUpdate.driftSec)} color={sessionUpdate.driftSec > 60 ? 'red' : undefined} />
+        <MetricChip label="drift"    value={fmtDuration(sessionUpdate.driftSec)} color="red" />
       </div>
 
       {/* Activity feed */}

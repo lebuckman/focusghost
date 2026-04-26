@@ -124,7 +124,7 @@ src/
 ├── main.ts                  ← Electron main process entry + session engine
 ├── preload.ts               ← contextBridge exposes window.electronAPI
 ├── renderer/
-│   ├── App.tsx              ← screen state machine ('declare' | 'session' | 'chat' | 'recap')
+│   ├── App.tsx              ← screen state machine ('declare' | 'session' | 'chat' | 'recap' | 'settings')
 │   ├── electron.d.ts        ← TypeScript types for window.electronAPI
 │   ├── screens/
 │   │   ├── TaskDeclaration.tsx
@@ -260,7 +260,7 @@ export type ChatMessage = {
   content: string;
   timestamp: number;
 };
-export type Screen = "declare" | "session" | "chat" | "recap";
+export type Screen = "declare" | "session" | "chat" | "recap" | "settings";
 
 // --- Mock Data (remove once real IPC flows) ---
 export const MOCK_SESSION_UPDATE: SessionUpdate = {
