@@ -664,6 +664,8 @@ function registerIPC() {
 
 ipcMain.on('WINDOW_CLOSE',    () => mainWindow?.close());
 ipcMain.on('WINDOW_MINIMIZE', () => mainWindow?.minimize());
+ipcMain.on('WINDOW_COLLAPSE', () => mainWindow?.setSize(380, 80, true));
+ipcMain.on('WINDOW_EXPAND',   () => mainWindow?.setSize(380, 620, true));
 
 // ── Window ────────────────────────────────────────────────────────────────────
 

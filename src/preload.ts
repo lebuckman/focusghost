@@ -18,4 +18,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   removeAllListeners: (channel: string)           => ipcRenderer.removeAllListeners(channel),
   closeWindow:        ()                           => ipcRenderer.send('WINDOW_CLOSE'),
   minimizeWindow:     ()                           => ipcRenderer.send('WINDOW_MINIMIZE'),
+  collapseWindow:     ()                           => ipcRenderer.send('WINDOW_COLLAPSE'),
+  expandWindow:       ()                           => ipcRenderer.send('WINDOW_EXPAND'),
 });

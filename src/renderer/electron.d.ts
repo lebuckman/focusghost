@@ -18,6 +18,8 @@ declare global {
       removeAllListeners: (channel: string) => void;
       closeWindow:        () => void;
       minimizeWindow:     () => void;
+      collapseWindow:     () => void;
+      expandWindow:       () => void;
     };
   }
 }
