@@ -22,6 +22,7 @@ declare global {
       expandWindow:       () => void;
       getSettings:        () => Promise<unknown>;
       setWindowDim:       (dimmed: boolean) => Promise<void>;
+      platform:           string;
     };
   }
 }

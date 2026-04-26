@@ -22,4 +22,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   expandWindow:       ()                           => ipcRenderer.send('WINDOW_EXPAND'),
   getSettings:        ()                           => ipcRenderer.invoke(IPC.GET_SETTINGS),
   setWindowDim:       (d: boolean)                 => ipcRenderer.invoke(IPC.SET_WINDOW_DIM, d),
+  platform:           process.platform,
 });

@@ -973,9 +973,15 @@ const createWindow = () => {
     width: 380,
     height: 620,
     alwaysOnTop: true,
+<<<<<<< HEAD
     titleBarStyle: process.platform === "darwin" ? "hidden" : "default",
     trafficLightPosition:
       process.platform === "darwin" ? { x: 10, y: 11 } : undefined,
+=======
+    frame: process.platform === 'darwin',
+    titleBarStyle: process.platform === 'darwin' ? 'hidden' : undefined,
+    trafficLightPosition: process.platform === 'darwin' ? { x: 10, y: 11 } : undefined,
+>>>>>>> b33cfea (ui: windows-only frame update)
     resizable: true,
     movable: true,
     webPreferences: {
