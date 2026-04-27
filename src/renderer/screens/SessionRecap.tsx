@@ -304,7 +304,7 @@ export default function SessionRecap({ recap, onNewSession, onOpenSettings, acce
             <div style={{
               fontFamily: "'JetBrains Mono', monospace",
               fontSize: 16,
-              color: earlyEnd ? '#facc15' : accent,
+              color: accent,
               fontWeight: 600,
               fontVariantNumeric: 'tabular-nums',
               letterSpacing: '-0.02em',
@@ -333,17 +333,6 @@ export default function SessionRecap({ recap, onNewSession, onOpenSettings, acce
             <GearIcon size={14} />
           </button>
         </div>
-        {/* Settings button */}
-        <button
-          onClick={onOpenSettings}
-          title="settings"
-          style={{ background: 'transparent', border: 'none', padding: '0 0 0 6px', cursor: 'pointer', color: '#525252', display: 'flex', alignItems: 'center', flexShrink: 0 }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#a3a3a3')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#525252')}
-          aria-label="settings"
-        >
-          <GearIcon size={13} />
-        </button>
       </div>
 
       {/* Scrollable body */}

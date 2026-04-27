@@ -187,12 +187,13 @@ export default function Settings({ settings, onBack, onChange }: Props) {
 
         {/* Drift threshold */}
         <div style={{ marginBottom: 18 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
             <div style={{ fontSize: 12, color: '#e5e5e5' }}>drift threshold</div>
             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: accent, fontVariantNumeric: 'tabular-nums' }}>
               {thresholdMin} min
             </div>
           </div>
+          <div style={{ fontSize: 10, color: '#737373', marginBottom: 8 }}>how long you spend on a distraction before a nudge fires</div>
           <input
             type="range" min={1} max={10} value={thresholdMin}
             onChange={e => onChange({ inactivityThreshold: Number(e.target.value) * 60 })}
