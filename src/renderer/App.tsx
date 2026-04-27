@@ -239,6 +239,11 @@ export default function App() {
             onStart={(task, durationMin) => {
               setActiveTask(task);
               setActiveMins(durationMin);
+              setSessionUpdate({
+                currentApp: '', currentAppProcess: '', currentAppBundle: '', currentAppTitle: '',
+                category: 'unknown', switchCount: 0, elapsedSec: 0, focusSec: 0, driftSec: 0,
+                ghostState: 'calm', recentSwitches: [],
+              });
               setScreen('session');
             }}
             onOpenSettings={() => openSettings('declare')}
