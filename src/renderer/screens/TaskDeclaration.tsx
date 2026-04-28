@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import GhostMascot from '../components/GhostMascot';
+import LaunchGhostAnimation from '../components/LaunchGhostAnimation';
 import { GearIcon } from './Settings';
 
 interface Props {
@@ -79,9 +79,7 @@ export default function TaskDeclaration({ onStart, onOpenSettings, accent }: Pro
       </button>
 
       {/* Ghost */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
-        <GhostMascot state="calm" size={56} tint={accent} />
-      </div>
+      <LaunchGhostAnimation accent={accent} size={56} />
 
       {/* Greeting */}
       <div style={{ textAlign: 'center', marginBottom: 28 }}>

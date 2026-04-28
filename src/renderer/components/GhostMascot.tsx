@@ -6,6 +6,9 @@ interface Props {
   size?: number;
   tint?: string;
   category?: WindowCategory;
+  animate?: boolean;
+  glow?: boolean;
+  showEyes?: boolean;
 }
 
 type VisualState = 'calm' | 'drifting' | 'stuck' | 'happy' | 'sleepy';
@@ -39,7 +42,7 @@ const EYES: Record<VisualState, { yRatio: number; hRatio: number; wRatio: number
   sleepy:   { yRatio: 0.44, hRatio: 0.02, wRatio: 0.10, squint: 1 },
 };
 
-export default function GhostMascot({ state, size = 48, tint: tintOverride, category }: Props) {
+export default function GhostMascot({ state, size = 48, tint: tintOverride, category, animate = true, glow = true, showEyes = true }: Props) {
   // category 'focus' promotes the ghost to the happy visual
   const baseVs = toVisual(state);
   const vs: VisualState = category === 'focus' ? 'happy' : baseVs;
@@ -50,6 +53,10 @@ export default function GhostMascot({ state, size = 48, tint: tintOverride, cate
   const bodyTint = tintOverride ?? TINT[vs];
   const shadowColor = tintOverride ?? '#5dd8e6';
   const isDistraction = category === 'distraction';
+  const animation = animate ? ANIM[vs] : 'none';
+  const filter = glow
+    ? `drop-shadow(0 0 6px ${shadowColor}8c) drop-shadow(0 0 12px ${shadowColor}40)`
+    : 'none';
 
   return (
     <div style={{ display: 'inline-block', width: w, height: h, flexShrink: 0 }}>
@@ -58,8 +65,8 @@ export default function GhostMascot({ state, size = 48, tint: tintOverride, cate
         height={h}
         viewBox={`0 0 ${w} ${h}`}
         style={{
-          filter: `drop-shadow(0 0 6px ${shadowColor}8c) drop-shadow(0 0 12px ${shadowColor}40)`,
-          animation: ANIM[vs],
+          filter,
+          animation,
           overflow: 'visible',
         }}
       >
@@ -79,22 +86,26 @@ export default function GhostMascot({ state, size = 48, tint: tintOverride, cate
           fill={bodyTint}
           opacity={0.95}
         />
-        {/* Left eye */}
-        <ellipse
-          cx={w * 0.38}
-          cy={h * eyes.yRatio}
-          rx={w * eyes.wRatio / 2}
-          ry={h * eyes.hRatio / 2 * (1 - eyes.squint * 0.9)}
-          fill="#111"
-        />
-        {/* Right eye */}
-        <ellipse
-          cx={w * 0.62}
-          cy={h * eyes.yRatio}
-          rx={w * eyes.wRatio / 2}
-          ry={h * eyes.hRatio / 2 * (1 - eyes.squint * 0.9)}
-          fill="#111"
-        />
+        {showEyes && (
+          <>
+            {/* Left eye */}
+            <ellipse
+              cx={w * 0.38}
+              cy={h * eyes.yRatio}
+              rx={w * eyes.wRatio / 2}
+              ry={h * eyes.hRatio / 2 * (1 - eyes.squint * 0.9)}
+              fill="#111"
+            />
+            {/* Right eye */}
+            <ellipse
+              cx={w * 0.62}
+              cy={h * eyes.yRatio}
+              rx={w * eyes.wRatio / 2}
+              ry={h * eyes.hRatio / 2 * (1 - eyes.squint * 0.9)}
+              fill="#111"
+            />
+          </>
+        )}
         {/* Drifting: red blush */}
         {vs === 'drifting' && (
           <>
