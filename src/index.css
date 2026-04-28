@@ -51,10 +51,11 @@ textarea {
 @keyframes ghostFloat {
   0%,
   100% {
-    transform: translateY(0);
+    transform: translateY(0.7px) rotate(-1deg) scale(1);
   }
+
   50% {
-    transform: translateY(-3px);
+    transform: translateY(-2px) rotate(1deg) scale(1.02);
   }
 }
 @keyframes ghostWobble {
@@ -94,14 +95,16 @@ textarea {
 /* Portal shell */
 .portal-container {
   position: absolute;
-  width: calc(var(--ghost-size) * 1.4);
-  height: calc(var(--ghost-size) * 1.4);
+  width: calc(var(--ghost-size) * 2.3);
+  height: calc(var(--ghost-size) * 2.3);
   display: flex;
   justify-content: center;
   align-items: center;
   opacity: 0;
   z-index: 3;
-  animation: portalFadeIn 0.6s ease-out 0s forwards, portalFadeOut 0.6s ease-in 2.2s forwards;
+  animation:
+    portalFadeIn 0.6s ease-out 0s forwards,
+    portalFadeOut 0.6s ease-in 2.2s forwards;
 }
 
 /* Portal rings */
@@ -109,8 +112,8 @@ textarea {
   position: absolute;
   width: calc(var(--ghost-size) * 1.1);
   height: calc(var(--ghost-size) * 1.1);
-  border: 1.5px solid var(--accent);
-  border-radius: 50%;
+  border: 2px solid var(--accent);
+  border-radius: 45%;
   filter: drop-shadow(0 0 6px var(--accent-glow));
   animation: portalSpin 2.2s linear 0s forwards;
 }
@@ -118,7 +121,7 @@ textarea {
 .portal-ring-inner {
   width: calc(var(--ghost-size) * 0.9);
   height: calc(var(--ghost-size) * 0.9);
-  border-width: 1px;
+  border-width: 0.5px;
   opacity: 0.7;
   animation: portalSpin 2.2s linear 0.12s reverse forwards;
 }
@@ -129,7 +132,12 @@ textarea {
   width: calc(var(--ghost-size) * 0.65);
   height: calc(var(--ghost-size) * 0.65);
   border-radius: 50%;
-  background: radial-gradient(circle, var(--accent-glow) 0%, rgba(var(--accent-rgb), 0.08) 70%, transparent 100%);
+  background: radial-gradient(
+    circle,
+    var(--accent-glow) 0%,
+    rgba(var(--accent-rgb), 0.08) 70%,
+    transparent 100%
+  );
   filter: blur(8px);
   opacity: 0.6;
   animation: portalGlowPulse 2.2s ease-in-out 0s forwards;
@@ -142,7 +150,7 @@ textarea {
   top: 50%;
   transform: translate(-50%, -50%) translateX(-28%) scale(0.98);
   opacity: 0;
-  z-index: 2;
+  z-index: 5;
   will-change: transform, opacity;
   animation: ghostEnterPath 2.4s ease-out 0.55s forwards;
 }
@@ -170,11 +178,14 @@ textarea {
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  filter: drop-shadow(0 0 4px var(--accent-soft)) drop-shadow(0 0 10px var(--accent-glow));
+  filter: drop-shadow(0 0 4px var(--accent-soft))
+    drop-shadow(0 0 10px var(--accent-glow));
   backface-visibility: hidden;
   transform-origin: 50% 85%;
   transform: rotate(-10deg);
-  animation: ghostPeekTilt 1.6s ease-out 0.55s forwards, ghostFloat 4.8s ease-in-out 3s infinite;
+  animation:
+    ghostPeekTilt 1.6s ease-out 0.55s forwards,
+    ghostFloat 4.8s ease-in-out 3s infinite;
 }
 
 /* Eyes overlay for look-around */
@@ -229,7 +240,11 @@ textarea {
 
 .ghost-ripple-glow {
   border: none;
-  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.5) 0%, transparent 100%);
+  background: radial-gradient(
+    circle,
+    rgba(var(--accent-rgb), 0.5) 0%,
+    transparent 100%
+  );
   filter: blur(7px);
   animation: ghostRippleGlow 0.7s ease-out 2.1s forwards;
 }
@@ -298,13 +313,13 @@ textarea {
 
 @keyframes ghostPeekTilt {
   0% {
-    transform: rotate(-10deg);
+    transform: rotate(30deg);
   }
   45% {
-    transform: rotate(-14deg);
+    transform: rotate(20deg);
   }
   75% {
-    transform: rotate(-8deg);
+    transform: rotate(12deg);
   }
   100% {
     transform: rotate(0deg);
@@ -405,8 +420,13 @@ textarea {
 
 /* Insight loading shimmer */
 @keyframes insightShimmer {
-  0%, 100% { opacity: 0.35; }
-  50%       { opacity: 0.65; }
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.65;
+  }
 }
 .insight-shimmer {
   animation: insightShimmer 1.4s ease-in-out infinite;
