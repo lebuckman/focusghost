@@ -1,7 +1,7 @@
-@import '@fontsource/inter/400.css';
-@import '@fontsource/inter/500.css';
-@import '@fontsource/inter/600.css';
-@import '@fontsource/jetbrains-mono/500.css';
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/jetbrains-mono/500.css";
 
 @tailwind base;
 @tailwind components;
@@ -10,7 +10,7 @@
 body {
   background-color: #111111;
   color: #e5e5e5;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   margin: 0;
   padding: 0;
   user-select: none;
@@ -19,54 +19,414 @@ body {
   -webkit-app-region: drag;
 }
 
-/* ...except interactive elements and scroll containers */
-button, input, textarea, a, select, [role="button"], .fg-scroll {
+/* ...except interactive elements, which must stay clickable */
+button,
+input,
+textarea,
+a,
+select,
+[role="button"] {
   -webkit-app-region: no-drag;
 }
 
-input, textarea {
+input,
+textarea {
   user-select: text;
   -webkit-user-select: text;
 }
 
-/* Scrollbar — hidden until hover */
-.fg-scroll::-webkit-scrollbar { width: 3px; }
-.fg-scroll::-webkit-scrollbar-track { background: transparent; }
-.fg-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 2px; transition: background 0.2s; }
-.fg-scroll:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
+/* Scrollbar */
+.fg-scroll::-webkit-scrollbar {
+  width: 3px;
+}
+.fg-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.fg-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
 
 /* Ghost animations */
 @keyframes ghostFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
+  0%,
+  100% {
+    transform: translateY(0.7px) rotate(-1deg) scale(1);
+  }
+
+  50% {
+    transform: translateY(-2px) rotate(1deg) scale(1.02);
+  }
 }
 @keyframes ghostWobble {
-  0%, 100% { transform: translateX(0) rotate(0deg); }
-  25% { transform: translateX(-1px) rotate(-2deg); }
-  75% { transform: translateX(1px) rotate(2deg); }
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  25% {
+    transform: translateX(-1px) rotate(-2deg);
+  }
+  75% {
+    transform: translateX(1px) rotate(2deg);
+  }
 }
 @keyframes ghostThink {
-  0%, 100% { transform: translateY(0) rotate(-1deg); }
-  50% { transform: translateY(-2px) rotate(1deg); }
-}
-@keyframes angerPulse {
-  0%, 100% { transform: scale(1) rotate(0deg); }
-  15%       { transform: scale(1.3) rotate(-10deg); }
-  30%       { transform: scale(1.05) rotate(6deg); }
-  50%       { transform: scale(1.2) rotate(-5deg); }
-  70%       { transform: scale(1.05) rotate(3deg); }
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-2px) rotate(1deg);
+  }
 }
 
-/* Custom duration input cursor */
-@keyframes fgCursorBlink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
+/* Launch portal intro animations */
+.ghost-stage {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+  height: calc(var(--ghost-size) * 1.6);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Portal shell */
+.portal-container {
+  position: absolute;
+  width: calc(var(--ghost-size) * 2.3);
+  height: calc(var(--ghost-size) * 2.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  z-index: 3;
+  animation:
+    portalFadeIn 0.6s ease-out 0s forwards,
+    portalFadeOut 0.6s ease-in 2.2s forwards;
+}
+
+/* Portal rings */
+.portal-ring {
+  position: absolute;
+  width: calc(var(--ghost-size) * 1.1);
+  height: calc(var(--ghost-size) * 1.1);
+  border: 2px solid var(--accent);
+  border-radius: 45%;
+  filter: drop-shadow(0 0 6px var(--accent-glow));
+  animation: portalSpin 2.2s linear 0s forwards;
+}
+
+.portal-ring-inner {
+  width: calc(var(--ghost-size) * 0.9);
+  height: calc(var(--ghost-size) * 0.9);
+  border-width: 0.5px;
+  opacity: 0.7;
+  animation: portalSpin 2.2s linear 0.12s reverse forwards;
+}
+
+/* Portal glow core */
+.portal-glow {
+  position: absolute;
+  width: calc(var(--ghost-size) * 0.65);
+  height: calc(var(--ghost-size) * 0.65);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    var(--accent-glow) 0%,
+    rgba(var(--accent-rgb), 0.08) 70%,
+    transparent 100%
+  );
+  filter: blur(8px);
+  opacity: 0.6;
+  animation: portalGlowPulse 2.2s ease-in-out 0s forwards;
+}
+
+/* Ghost entry wrapper */
+.ghost-enter {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) translateX(-28%) scale(0.98);
+  opacity: 0;
+  z-index: 5;
+  will-change: transform, opacity;
+  animation: ghostEnterPath 2.4s ease-out 0.55s forwards;
+}
+
+.ghost-peek {
+  pointer-events: none;
+}
+
+/* Portal mask so the peek feels inside the portal */
+.ghost-enter .ghost-mask {
+  width: calc(var(--ghost-size) * 1.05);
+  height: calc(var(--ghost-size) * 1.05);
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transform: scale(0.76);
+  animation: ghostMaskReveal 2.4s ease-out 0.55s forwards;
+}
+
+/* Ghost body and aura */
+.ghost-mascot {
+  position: relative;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  filter: drop-shadow(0 0 4px var(--accent-soft))
+    drop-shadow(0 0 10px var(--accent-glow));
+  backface-visibility: hidden;
+  transform-origin: 50% 85%;
+  transform: rotate(-10deg);
+  animation:
+    ghostPeekTilt 1.6s ease-out 0.55s forwards,
+    ghostFloat 4.8s ease-in-out 3s infinite;
+}
+
+/* Eyes overlay for look-around */
+.ghost-eyes {
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  width: calc(var(--ghost-size) * 0.32);
+  height: calc(var(--ghost-size) * 0.08);
+  display: flex;
+  justify-content: space-between;
+  transform: translate(-50%, -50%);
+  animation: ghostEyesScan 1.5s ease-in-out 1.05s forwards;
+}
+
+.ghost-eye {
+  width: calc(var(--ghost-size) * 0.08);
+  height: calc(var(--ghost-size) * 0.08);
+  border-radius: 50%;
+  background: #111111;
+}
+
+/* Mouth expression */
+.ghost-mouth {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  width: calc(var(--ghost-size) * 0.12);
+  height: calc(var(--ghost-size) * 0.08);
+  border-radius: 999px;
+  background: #111111;
+  transform: translate(-50%, -50%) scaleY(0.2);
+  opacity: 0;
+  animation: ghostMouthOpen 0.9s ease-out 1.45s forwards;
+}
+
+/* Exit ripple */
+.ghost-ripple {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--ghost-size) * 0.55);
+  height: calc(var(--ghost-size) * 0.55);
+  border-radius: 50%;
+  border: 1px solid var(--accent);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.3);
+  z-index: 4;
+  animation: ghostRippleBurst 0.7s ease-out 2.1s forwards;
+  pointer-events: none;
+}
+
+.ghost-ripple-glow {
+  border: none;
+  background: radial-gradient(
+    circle,
+    rgba(var(--accent-rgb), 0.5) 0%,
+    transparent 100%
+  );
+  filter: blur(7px);
+  animation: ghostRippleGlow 0.7s ease-out 2.1s forwards;
+}
+
+@keyframes portalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes portalFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes portalSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes portalGlowPulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+
+@keyframes ghostEnterPath {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateX(-28%) scale(0.98);
+  }
+  22% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateX(-24%) scale(0.98);
+  }
+  55% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateX(-24%) scale(0.98);
+  }
+  78% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateX(-10%) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateX(0) scale(1.06);
+  }
+}
+
+@keyframes ghostPeekTilt {
+  0% {
+    transform: rotate(30deg);
+  }
+  45% {
+    transform: rotate(20deg);
+  }
+  75% {
+    transform: rotate(12deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes ghostMaskReveal {
+  0% {
+    transform: scale(0.76);
+  }
+  55% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1.18);
+  }
+}
+
+@keyframes ghostEyesScan {
+  0% {
+    transform: translate(-50%, -50%) translateX(0);
+  }
+  30% {
+    transform: translate(-50%, -50%) translateX(-3px);
+  }
+  60% {
+    transform: translate(-50%, -50%) translateX(3px);
+  }
+  85% {
+    transform: translate(-50%, -50%) translateX(0);
+  }
+  100% {
+    transform: translate(-50%, -50%) translateX(0);
+  }
+}
+
+@keyframes ghostMouthOpen {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scaleY(0.2);
+  }
+  35% {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scaleY(1.1);
+  }
+  75% {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scaleY(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scaleY(0.4);
+  }
+}
+
+@keyframes ghostRippleBurst {
+  0% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.8);
+  }
+}
+
+@keyframes ghostRippleGlow {
+  0% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-container,
+  .ghost-ripple,
+  .ghost-ripple-glow {
+    display: none;
+  }
+
+  .ghost-enter {
+    opacity: 1;
+    animation: none;
+    transform: translate(-50%, -50%);
+  }
+
+  .ghost-enter .ghost-mask,
+  .ghost-mascot,
+  .ghost-eyes,
+  .ghost-mouth {
+    animation: none;
+  }
 }
 
 /* Insight loading shimmer */
 @keyframes insightShimmer {
-  0%, 100% { opacity: 0.35; }
-  50%       { opacity: 0.65; }
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.65;
+  }
 }
 .insight-shimmer {
   animation: insightShimmer 1.4s ease-in-out infinite;
@@ -74,10 +434,68 @@ input, textarea {
 
 /* Chat animations */
 @keyframes pulseDot {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 @keyframes thinkDot {
-  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
-  40% { transform: translateY(-3px); opacity: 1; }
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  40% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+
+/* Ghost Trails recap animations */
+@keyframes fgTrailDraw {
+  from {
+    stroke-dashoffset: var(--trail-start, 1000);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fgTrailNodeIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes fgTrailMarkerPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.18),
+      0 0 11px rgba(45, 212, 191, 0.36);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.26),
+      0 0 18px rgba(45, 212, 191, 0.58);
+  }
+}
+
+@keyframes fgTrailTagFloat {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-2px);
+  }
 }
