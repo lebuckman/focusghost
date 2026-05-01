@@ -26,11 +26,12 @@ const warnInvalidPayload = (channel: string) => {
   console.warn(`[electronAPI] Ignored invalid ${channel} payload`);
 };
 
-const onValidatedPayload = <T>(
-  channel: string,
-  guard: (value: unknown) => value is T,
-  callback: (data: T) => void,
-) =>
+const onValidatedPayload =
+  <T>(
+    channel: string,
+    guard: (value: unknown) => value is T,
+    callback: (data: T) => void,
+  ) =>
   (_event: unknown, data: unknown) => {
     if (!guard(data)) {
       warnInvalidPayload(channel);

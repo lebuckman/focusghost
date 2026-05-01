@@ -26,8 +26,10 @@ const isBoolean = (value: unknown): value is boolean =>
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every(isString);
 
-const isOneOf = <T extends string>(value: unknown, allowed: readonly T[]): value is T =>
-  isString(value) && allowed.includes(value as T);
+const isOneOf = <T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+): value is T => isString(value) && allowed.includes(value as T);
 
 const WINDOW_CATEGORIES = [
   "focus",
@@ -37,7 +39,13 @@ const WINDOW_CATEGORIES = [
   "unknown",
 ] as const satisfies readonly WindowCategory[];
 
-const GHOST_STATES = ["calm", "concerned", "thinking", "happy", "sleepy"] as const satisfies readonly GhostMascotState[];
+const GHOST_STATES = [
+  "calm",
+  "concerned",
+  "thinking",
+  "happy",
+  "sleepy",
+] as const satisfies readonly GhostMascotState[];
 
 const NUDGE_TYPES = [
   "distraction-firm",
@@ -87,7 +95,8 @@ const isSessionUpdate = (value: unknown): value is SessionUpdate =>
   isNumber(value.focusSec) &&
   isNumber(value.driftSec) &&
   isOneOf(value.ghostState, GHOST_STATES) &&
-  Array.isArray(value.recentSwitches) && value.recentSwitches.every(isSwitchEntry);
+  Array.isArray(value.recentSwitches) &&
+  value.recentSwitches.every(isSwitchEntry);
 
 const isNudgePayload = (value: unknown): value is NudgePayload =>
   isObject(value) &&
@@ -95,24 +104,31 @@ const isNudgePayload = (value: unknown): value is NudgePayload =>
   (value.tier === 1 || value.tier === 2) &&
   isString(value.message) &&
   isOneOf(value.driftType, ["frequency", "distraction", "stuck"] as const) &&
-  (value.context === undefined || (
-    isObject(value.context) &&
-    (value.context.task === undefined || isString(value.context.task)) &&
-    (value.context.appName === undefined || isString(value.context.appName)) &&
-    (value.context.driftDurationSec === undefined || isNumber(value.context.driftDurationSec)) &&
-    (value.context.investedSec === undefined || isNumber(value.context.investedSec)) &&
-    (value.context.remainingSec === undefined || isNumber(value.context.remainingSec)) &&
-    (value.context.occurrences === undefined || isNumber(value.context.occurrences)) &&
-    (value.context.streakDays === undefined || isNumber(value.context.streakDays)) &&
-    (value.context.blockUntil === undefined || isNumber(value.context.blockUntil)) &&
-    (value.context.clarificationPayload === undefined || (
-      isObject(value.context.clarificationPayload) &&
-      isBoolean(value.context.clarificationPayload.isBrowser) &&
-      (value.context.clarificationPayload.appName === undefined || isString(value.context.clarificationPayload.appName)) &&
-      (value.context.clarificationPayload.siteName === undefined || isString(value.context.clarificationPayload.siteName)) &&
-      isStringArray(value.context.clarificationPayload.titleKeywords)
-    ))
-  ));
+  (value.context === undefined ||
+    (isObject(value.context) &&
+      (value.context.task === undefined || isString(value.context.task)) &&
+      (value.context.appName === undefined ||
+        isString(value.context.appName)) &&
+      (value.context.driftDurationSec === undefined ||
+        isNumber(value.context.driftDurationSec)) &&
+      (value.context.investedSec === undefined ||
+        isNumber(value.context.investedSec)) &&
+      (value.context.remainingSec === undefined ||
+        isNumber(value.context.remainingSec)) &&
+      (value.context.occurrences === undefined ||
+        isNumber(value.context.occurrences)) &&
+      (value.context.streakDays === undefined ||
+        isNumber(value.context.streakDays)) &&
+      (value.context.blockUntil === undefined ||
+        isNumber(value.context.blockUntil)) &&
+      (value.context.clarificationPayload === undefined ||
+        (isObject(value.context.clarificationPayload) &&
+          isBoolean(value.context.clarificationPayload.isBrowser) &&
+          (value.context.clarificationPayload.appName === undefined ||
+            isString(value.context.clarificationPayload.appName)) &&
+          (value.context.clarificationPayload.siteName === undefined ||
+            isString(value.context.clarificationPayload.siteName)) &&
+          isStringArray(value.context.clarificationPayload.titleKeywords)))));
 
 const isAppSettings = (value: unknown): value is AppSettings =>
   isObject(value) &&
@@ -120,7 +136,11 @@ const isAppSettings = (value: unknown): value is AppSettings =>
   isNumber(value.inactivityThreshold) &&
   isBoolean(value.nudgeEnabled) &&
   isBoolean(value.voiceEnabled) &&
-  isOneOf(value.personality, ["supportive", "playful", "drill-sergeant"] as const) &&
+  isOneOf(value.personality, [
+    "supportive",
+    "playful",
+    "drill-sergeant",
+  ] as const) &&
   isNumber(value.opacity) &&
   isOneOf(value.accentColor, ["teal", "violet", "amber"] as const) &&
   isOneOf(value.nudgeSensitivity, ["gentle", "balanced", "strict"] as const) &&
@@ -146,7 +166,8 @@ const isSessionRecapPayload = (value: unknown): value is SessionRecapPayload =>
       isNumber(entry.seconds),
   ) &&
   isString(value.insight) &&
-  Array.isArray(value.switchLog) && value.switchLog.every(isSwitchEntry);
+  Array.isArray(value.switchLog) &&
+  value.switchLog.every(isSwitchEntry);
 
 export {
   isAppSettings,
