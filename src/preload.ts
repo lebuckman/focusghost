@@ -13,6 +13,32 @@ import type {
   StartSessionPayload,
   NudgeType,
 } from "./shared/ipc-contract";
+import {
+  isAppSettings,
+  isChatResponsePayload,
+  isGhostMessagePayload,
+  isNudgePayload,
+  isSessionRecapPayload,
+  isSessionUpdate,
+} from "./shared/ipc-validators";
+
+const warnInvalidPayload = (channel: string) => {
+  console.warn(`[electronAPI] Ignored invalid ${channel} payload`);
+};
+
+const onValidatedPayload = <T>(
+  channel: string,
+  guard: (value: unknown) => value is T,
+  callback: (data: T) => void,
+) =>
+  (_event: unknown, data: unknown) => {
+    if (!guard(data)) {
+      warnInvalidPayload(channel);
+      return;
+    }
+
+    callback(data);
+  };
 
 contextBridge.exposeInMainWorld("electronAPI", {
   startSession: (payload: StartSessionPayload) =>
@@ -24,24 +50,33 @@ contextBridge.exposeInMainWorld("electronAPI", {
   updateSettings: (payload: Partial<AppSettings>) =>
     ipcRenderer.invoke(IPC.UPDATE_SETTINGS, payload),
   onSessionUpdate: (cb: (data: SessionUpdate) => void) =>
-    ipcRenderer.on(IPC.SESSION_UPDATE, (_e, data) => cb(data as SessionUpdate)),
+    ipcRenderer.on(
+      IPC.SESSION_UPDATE,
+      onValidatedPayload(IPC.SESSION_UPDATE, isSessionUpdate, cb),
+    ),
   onNudge: (cb: (data: NudgePayload) => void) =>
-    ipcRenderer.on(IPC.TRIGGER_NUDGE, (_e, data) => cb(data as NudgePayload)),
+    ipcRenderer.on(
+      IPC.TRIGGER_NUDGE,
+      onValidatedPayload(IPC.TRIGGER_NUDGE, isNudgePayload, cb),
+    ),
   onOpenGhostChat: (cb: (data: OpenGhostChatPayload) => void) =>
     ipcRenderer.on(IPC.OPEN_GHOST_CHAT, (_e, data) =>
       cb(data as OpenGhostChatPayload),
     ),
   onGhostMessage: (cb: (data: GhostMessagePayload) => void) =>
-    ipcRenderer.on(IPC.GHOST_MESSAGE, (_e, data) =>
-      cb(data as GhostMessagePayload),
+    ipcRenderer.on(
+      IPC.GHOST_MESSAGE,
+      onValidatedPayload(IPC.GHOST_MESSAGE, isGhostMessagePayload, cb),
     ),
   onChatResponse: (cb: (data: ChatResponsePayload) => void) =>
-    ipcRenderer.on(IPC.CHAT_RESPONSE, (_e, data) =>
-      cb(data as ChatResponsePayload),
+    ipcRenderer.on(
+      IPC.CHAT_RESPONSE,
+      onValidatedPayload(IPC.CHAT_RESPONSE, isChatResponsePayload, cb),
     ),
   onSessionRecap: (cb: (data: SessionRecapPayload) => void) =>
-    ipcRenderer.on(IPC.SESSION_RECAP, (_e, data) =>
-      cb(data as SessionRecapPayload),
+    ipcRenderer.on(
+      IPC.SESSION_RECAP,
+      onValidatedPayload(IPC.SESSION_RECAP, isSessionRecapPayload, cb),
     ),
   onNudgeDismissed: (cb: () => void) =>
     ipcRenderer.on(IPC.NUDGE_DISMISSED, () => cb()),
@@ -53,7 +88,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
   collapseWindow: () => ipcRenderer.send(IPC.WINDOW_COLLAPSE),
   expandWindow: () => ipcRenderer.send(IPC.WINDOW_EXPAND),
   getSettings: () =>
-    ipcRenderer.invoke(IPC.GET_SETTINGS) as Promise<AppSettings>,
+    ipcRenderer.invoke(IPC.GET_SETTINGS).then((settings) => {
+      if (!isAppSettings(settings)) {
+        warnInvalidPayload(IPC.GET_SETTINGS);
+        return undefined;
+      }
+
+      return settings;
+    }),
   requestGhostChat: (reason?: string) =>
     ipcRenderer.invoke(IPC.REQUEST_GHOST_CHAT, reason),
   snoozeNudge: (appName?: string) =>

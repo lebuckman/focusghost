@@ -34,7 +34,7 @@ declare global {
       minimizeWindow: () => void;
       collapseWindow: () => void;
       expandWindow: () => void;
-      getSettings: () => Promise<AppSettings>;
+      getSettings: () => Promise<AppSettings | undefined>;
       requestGhostChat: (reason?: string) => Promise<void>;
       snoozeNudge: (appName?: string) => Promise<void>;
       blockApp: (appName: string, until: number) => Promise<void>;
