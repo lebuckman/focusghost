@@ -1,8 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
-import GhostMascot from '../components/GhostMascot';
-import { GearIcon } from './Settings';
-import type { ChatEntry, GhostMessagePayload, ChatResponsePayload } from '../../shared/ipc-contract';
-import { IPC } from '../../shared/ipc-contract';
+import { useEffect, useRef, useState } from "react";
+import GhostMascot from "../components/GhostMascot";
+import { GearIcon } from "./Settings";
+import type {
+  ChatEntry,
+  GhostMessagePayload,
+  ChatResponsePayload,
+} from "../../shared/ipc-contract";
+import { IPC } from "../../shared/ipc-contract";
+import {
+  isChatResponsePayload,
+  isGhostMessagePayload,
+} from "../../shared/ipc-validators";
 
 interface Props {
   task: string;
@@ -22,10 +30,18 @@ function relativeTime(timestamp: number): string {
   return `${Math.floor(m / 60)}h ago`;
 }
 
-export default function GhostChat({ task, trigger, prefillMessage, onBack, onOpenSettings, onCollapse, accent }: Props) {
+export default function GhostChat({
+  task,
+  trigger,
+  prefillMessage,
+  onBack,
+  onOpenSettings,
+  onCollapse,
+  accent,
+}: Props) {
   const [chatHistory, setChatHistory] = useState<ChatEntry[]>([]);
-  const [input, setInput]             = useState('');
-  const [isThinking, setIsThinking]   = useState(false);
+  const [input, setInput] = useState("");
+  const [isThinking, setIsThinking] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   // Track whether we've already shown the opening greeting
   const greeted = useRef(false);
@@ -35,38 +51,54 @@ export default function GhostChat({ task, trigger, prefillMessage, onBack, onOpe
     if (!greeted.current) {
       greeted.current = true;
       const greeting: ChatEntry = {
-        role: 'ghost',
-        content: trigger === 'stuck'
-          ? `looks like you might be stuck on "${task}" — what's blocking you? (syntax error, logic issue, or just not sure where to start?)`
-          : `hey — i'm here while you work on "${task}". i'll stay quiet unless something changes.`,
+        role: "ghost",
+        content:
+          trigger === "stuck"
+            ? `looks like you might be stuck on "${task}" — what's blocking you? (syntax error, logic issue, or just not sure where to start?)`
+            : `hey — i'm here while you work on "${task}". i'll stay quiet unless something changes.`,
         timestamp: Date.now(),
       };
 
       if (prefillMessage) {
         // Chip was tapped — add the chip text as the user's first message and auto-send it
-        const userMsg: ChatEntry = { role: 'user', content: prefillMessage, timestamp: Date.now() + 1 };
+        const userMsg: ChatEntry = {
+          role: "user",
+          content: prefillMessage,
+          timestamp: Date.now() + 1,
+        };
         const initialHistory = [greeting, userMsg];
         setChatHistory(initialHistory);
         setIsThinking(true);
-        window.electronAPI.sendChat({ message: prefillMessage, chatHistory: initialHistory });
+        window.electronAPI.sendChat({
+          message: prefillMessage,
+          chatHistory: initialHistory,
+        });
       } else {
         setChatHistory([greeting]);
       }
     }
 
     window.electronAPI.onGhostMessage((d) => {
-      const m = d as GhostMessagePayload;
+      if (!isGhostMessagePayload(d)) {
+        console.warn("[electronAPI] Ignored invalid GHOST_MESSAGE payload");
+        return;
+      }
+
       setChatHistory((h) => [
         ...h,
-        { role: "ghost", content: m.message, timestamp: m.timestamp },
+        { role: "ghost", content: d.message, timestamp: d.timestamp },
       ]);
     });
     window.electronAPI.onChatResponse((d) => {
-      const r = d as ChatResponsePayload;
+      if (!isChatResponsePayload(d)) {
+        console.warn("[electronAPI] Ignored invalid CHAT_RESPONSE payload");
+        return;
+      }
+
       setIsThinking(false);
       setChatHistory((h) => [
         ...h,
-        { role: "ghost", content: r.message, timestamp: r.timestamp },
+        { role: "ghost", content: d.message, timestamp: d.timestamp },
       ]);
     });
 
@@ -175,22 +207,46 @@ export default function GhostChat({ task, trigger, prefillMessage, onBack, onOpe
         <button
           onClick={onCollapse}
           title="collapse"
-          style={{ background: 'transparent', border: 'none', padding: '0 0 0 4px', cursor: 'pointer', color: '#525252', display: 'flex', alignItems: 'center', flexShrink: 0 }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#a3a3a3')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#525252')}
+          style={{
+            background: "transparent",
+            border: "none",
+            padding: "0 0 0 4px",
+            cursor: "pointer",
+            color: "#525252",
+            display: "flex",
+            alignItems: "center",
+            flexShrink: 0,
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#a3a3a3")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "#525252")}
           aria-label="collapse"
         >
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-            <path d="M4.5 2H2V4.5M8.5 2H11V4.5M4.5 11H2V8.5M8.5 11H11V8.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+            <path
+              d="M4.5 2H2V4.5M8.5 2H11V4.5M4.5 11H2V8.5M8.5 11H11V8.5"
+              stroke="currentColor"
+              strokeWidth="1"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         </button>
         {/* Settings button */}
         <button
           onClick={onOpenSettings}
           title="settings"
-          style={{ background: 'transparent', border: 'none', padding: '0 0 0 4px', cursor: 'pointer', color: '#525252', display: 'flex', alignItems: 'center', flexShrink: 0 }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#a3a3a3')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#525252')}
+          style={{
+            background: "transparent",
+            border: "none",
+            padding: "0 0 0 4px",
+            cursor: "pointer",
+            color: "#525252",
+            display: "flex",
+            alignItems: "center",
+            flexShrink: 0,
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#a3a3a3")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "#525252")}
           aria-label="settings"
         >
           <GearIcon size={13} />
@@ -210,17 +266,28 @@ export default function GhostChat({ task, trigger, prefillMessage, onBack, onOpe
           gap: 12,
         }}
       >
-        {trigger === 'stuck' && (
-          <div style={{
-            background: 'rgba(250,204,21,0.06)',
-            border: '0.5px solid rgba(250,204,21,0.25)',
-            borderRadius: 8,
-            padding: '10px 12px',
-          }}>
-            <div style={{ fontSize: 10, color: '#facc15', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: 4 }}>
+        {trigger === "stuck" && (
+          <div
+            style={{
+              background: "rgba(250,204,21,0.06)",
+              border: "0.5px solid rgba(250,204,21,0.25)",
+              borderRadius: 8,
+              padding: "10px 12px",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                color: "#facc15",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                fontWeight: 600,
+                marginBottom: 4,
+              }}
+            >
               ↳ stuck mode activated
             </div>
-            <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.4 }}>
+            <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.4 }}>
               tell me what's snagging you and we'll work through it.
             </div>
           </div>
@@ -257,7 +324,9 @@ export default function GhostChat({ task, trigger, prefillMessage, onBack, onOpe
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') sendMessage(); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") sendMessage();
+            }}
             placeholder="chat with your ghost…"
             style={{
               flex: 1,
