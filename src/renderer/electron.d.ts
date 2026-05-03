@@ -1,32 +1,46 @@
+import type {
+  AppSettings,
+  ChatMessagePayload,
+  ChatResponsePayload,
+  GhostMessagePayload,
+  IPCChannel,
+  NudgePayload,
+  OpenGhostChatPayload,
+  SessionRecapPayload,
+  SessionUpdate,
+  StartSessionPayload,
+  NudgeType,
+} from "../shared/ipc-contract";
+
 export {};
 declare global {
   interface Window {
     electronAPI: {
-      startSession:       (payload: unknown) => Promise<void>;
-      endSession:         () => Promise<void>;
-      sendChat:           (payload: unknown) => Promise<void>;
-      dismissNudge:       () => Promise<void>;
-      debugNudge:         (type: string) => Promise<void>;
-      updateSettings:     (payload: unknown) => Promise<void>;
-      onSessionUpdate:    (cb: (data: unknown) => void) => void;
-      onNudge:            (cb: (data: unknown) => void) => void;
-      onOpenGhostChat:    (cb: (data: unknown) => void) => void;
-      onGhostMessage:     (cb: (data: unknown) => void) => void;
-      onChatResponse:     (cb: (data: unknown) => void) => void;
-      onSessionRecap:     (cb: (data: unknown) => void) => void;
-      onNudgeDismissed:   (cb: () => void) => void;
-      removeAllListeners: (channel: string) => void;
-      closeWindow:        () => void;
-      minimizeWindow:     () => void;
-      collapseWindow:     () => void;
-      expandWindow:       () => void;
-      getSettings:        () => Promise<unknown>;
-      requestGhostChat:   (reason?: string) => Promise<void>;
-      snoozeNudge:        (appName?: string) => Promise<void>;
-      blockApp:           (appName: string, until: number) => Promise<void>;
+      startSession: (payload: StartSessionPayload) => Promise<void>;
+      endSession: () => Promise<void>;
+      sendChat: (payload: ChatMessagePayload) => Promise<void>;
+      dismissNudge: () => Promise<void>;
+      debugNudge: (type: NudgeType) => Promise<void>;
+      updateSettings: (payload: Partial<AppSettings>) => Promise<void>;
+      onSessionUpdate: (cb: (data: SessionUpdate) => void) => void;
+      onNudge: (cb: (data: NudgePayload) => void) => void;
+      onOpenGhostChat: (cb: (data: OpenGhostChatPayload) => void) => void;
+      onGhostMessage: (cb: (data: GhostMessagePayload) => void) => void;
+      onChatResponse: (cb: (data: ChatResponsePayload) => void) => void;
+      onSessionRecap: (cb: (data: SessionRecapPayload) => void) => void;
+      onNudgeDismissed: (cb: () => void) => void;
+      removeAllListeners: (channel: IPCChannel) => void;
+      closeWindow: () => void;
+      minimizeWindow: () => void;
+      collapseWindow: () => void;
+      expandWindow: () => void;
+      getSettings: () => Promise<AppSettings | undefined>;
+      requestGhostChat: (reason?: string) => Promise<void>;
+      snoozeNudge: (appName?: string) => Promise<void>;
+      blockApp: (appName: string, until: number) => Promise<void>;
       classifyCorrection: (payload: unknown) => Promise<void>;
-      setWindowDim:       (dimmed: boolean) => Promise<void>;
-      platform:           string;
+      setWindowDim: (dimmed: boolean) => Promise<void>;
+      platform: string;
     };
   }
 }

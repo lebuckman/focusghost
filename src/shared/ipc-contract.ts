@@ -20,6 +20,10 @@ export const IPC = {
   NUDGE_DISMISSED: "NUDGE_DISMISSED",
   GET_SETTINGS: "GET_SETTINGS",
   SET_WINDOW_DIM: "SET_WINDOW_DIM",
+  WINDOW_CLOSE: "WINDOW_CLOSE",
+  WINDOW_MINIMIZE: "WINDOW_MINIMIZE",
+  WINDOW_COLLAPSE: "WINDOW_COLLAPSE",
+  WINDOW_EXPAND: "WINDOW_EXPAND",
   REQUEST_GHOST_CHAT: "REQUEST_GHOST_CHAT",
   SNOOZE_NUDGE: "SNOOZE_NUDGE",
   BLOCK_APP: "BLOCK_APP",
@@ -168,7 +172,7 @@ export interface AppSettings {
   inactivityThreshold: number;
   nudgeEnabled: boolean;
   voiceEnabled: boolean;
-  personality: 'supportive' | 'playful' | 'drill-sergeant';
+  personality: "supportive" | "playful" | "drill-sergeant";
   opacity: number;
   accentColor: "teal" | "violet" | "amber";
   nudgeSensitivity: "gentle" | "balanced" | "strict";
@@ -199,7 +203,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   inactivityThreshold: 10, // demo: 10s — raise to 300 (5min) for production
   nudgeEnabled: true,
   voiceEnabled: true,
-  personality: 'supportive',
+  personality: "supportive",
   opacity: 0.9,
   accentColor: "teal",
   nudgeSensitivity: "balanced",
