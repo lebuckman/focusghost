@@ -54,6 +54,17 @@ import {
 import { buildRecap } from "./main/session/recapService";
 import type { SessionState } from "./main/session/sessionTypes";
 import {
+  NUDGE_COOLDOWNS,
+  DISTRACTION_FIRM_SEC,
+  PATTERN_VISIT_COUNT,
+  PATTERN_WINDOW_SEC,
+  STUCK_SWITCH_COUNT,
+  STUCK_WINDOW_SEC,
+  STUCK_RECENCY_SEC,
+  IDLE_TRIGGER_SEC,
+  MILESTONE_STREAK_SEC,
+} from "./main/drift/driftConstants";
+import {
   initializeAIOrchestrator,
   generateChatResponse,
   generateInsight,
@@ -121,32 +132,6 @@ function deriveGhostState(
   if (category === "focus") return "calm";
   return "calm";
 }
-
-// ── Nudge helpers ─────────────────────────────────────────────────────────────
-
-// Demo: cooldowns are short so all nudge types can be triggered back-to-back.
-// Raise to 3/5/5/10/10/10 min for production.
-const NUDGE_COOLDOWNS: Record<string, number> = {
-  // demo: short cooldowns for testability — restore to 3/5/5/10/10/10 min for production
-  "in-app": 10 * 1000,
-  "distraction-firm": 15 * 1000,
-  "distraction-hard": 15 * 1000,
-  "stuck-helpful": 20 * 1000,
-  "idle-soft": 20 * 1000,
-  "pattern-observational": 20 * 1000,
-  "milestone-positive": Infinity,
-  clarify: 30 * 1000, // pendingClarifications set prevents re-ask per key; cooldown is a safety net
-};
-
-// DEMO THRESHOLDS — revert to production values after demo
-const DISTRACTION_FIRM_SEC = 8; // prod: 120
-const PATTERN_VISIT_COUNT = 1; // prod: 2  (fire pattern on 2nd visit)
-const PATTERN_WINDOW_SEC = 90; // prod: 600
-const STUCK_SWITCH_COUNT = 3; // prod: 6
-const STUCK_WINDOW_SEC = 45; // prod: 300
-const STUCK_RECENCY_SEC = 15; // prod: 30
-const IDLE_TRIGGER_SEC = 10; // same for prod
-const MILESTONE_STREAK_SEC = 20; // prod: 25 * 60
 
 function showCheckinNudge(
   win: BrowserWindow | null,
