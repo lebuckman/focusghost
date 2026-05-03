@@ -31,4 +31,6 @@ export interface SessionState {
   idleSoftFired: boolean; // true after idle-soft fires; reset when user is active
   focusStreakStart: number | null; // timestamp when current focus streak began
   blockedApps: Map<string, number>; // appName → blockedUntil timestamp
+  sessionCorrections: import("../../shared/classificationTypes").SessionCorrection[]; // user overrides for this session only
+  pendingClarifications: Set<string>; // keys already asked about ("appName:tabTitle")
 }
