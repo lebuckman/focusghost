@@ -1,0 +1,723 @@
+{
+  "schemaVersion": 1,
+  "name": "FocusGhost classification behavior",
+  "source": "focusghostClassificationUpdates.pdf",
+  "description": "Expected public classifications derived from the product specification. These fixtures describe desired behavior and do not modify the runtime classifier.",
+  "cases": [
+    {
+      "id": "focusghost-vscode-project",
+      "tags": ["pdf", "focusghost", "direct-work"],
+      "sessionGoal": "work on FocusGhost classification and nudges",
+      "activity": {
+        "appName": "Visual Studio Code",
+        "bundleId": "com.microsoft.VSCode",
+        "windowTitle": "activityClassifier.ts - focusghost",
+        "tabTitle": "activityClassifier.ts - focusghost"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "direct-work"
+      }
+    },
+    {
+      "id": "focusghost-localhost-preview",
+      "tags": ["pdf", "focusghost", "testing"],
+      "sessionGoal": "work on FocusGhost classification and nudges",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "FocusGhost - localhost:5173 - Google Chrome",
+        "tabTitle": "FocusGhost - localhost:5173"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "direct-work"
+      }
+    },
+    {
+      "id": "focusghost-figma-nudge-mockup",
+      "tags": ["pdf", "focusghost", "design"],
+      "sessionGoal": "work on FocusGhost classification and nudges",
+      "activity": {
+        "appName": "Figma",
+        "bundleId": "com.figma.Desktop",
+        "windowTitle": "FocusGhost nudge mockup - Figma",
+        "tabTitle": "FocusGhost nudge mockup"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "direct-work"
+      }
+    },
+    {
+      "id": "focusghost-electron-docs",
+      "contrastGroup": "electron-docs-by-task",
+      "tags": ["pdf", "focusghost", "relevant-reference"],
+      "sessionGoal": "work on FocusGhost classification and nudges",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "Electron Notification API - Electron Docs - Google Chrome",
+        "tabTitle": "Electron Notification API - Electron Docs"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "relevant-reference"
+      }
+    },
+    {
+      "id": "history-electron-docs",
+      "contrastGroup": "electron-docs-by-task",
+      "tags": ["contrast", "history", "unrelated-tool"],
+      "sessionGoal": "write a history essay about the French Revolution",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "Electron Notification API - Electron Docs - Google Chrome",
+        "tabTitle": "Electron Notification API - Electron Docs"
+      },
+      "expected": {
+        "status": "neutral",
+        "reasonCode": "unclear"
+      }
+    },
+    {
+      "id": "focusghost-github-repo",
+      "contrastGroup": "focusghost-repo-by-task",
+      "tags": ["pdf", "focusghost", "repository"],
+      "sessionGoal": "work on FocusGhost classification and nudges",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "umarashraf12/focusghost: AI productivity companion - GitHub - Google Chrome",
+        "tabTitle": "umarashraf12/focusghost: AI productivity companion - GitHub"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "direct-work"
+      }
+    },
+    {
+      "id": "history-focusghost-github-repo",
+      "contrastGroup": "focusghost-repo-by-task",
+      "tags": ["contrast", "history", "repository"],
+      "sessionGoal": "write a history essay about the French Revolution",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "umarashraf12/focusghost: AI productivity companion - GitHub - Google Chrome",
+        "tabTitle": "umarashraf12/focusghost: AI productivity companion - GitHub"
+      },
+      "expected": {
+        "status": "neutral",
+        "reasonCode": "unclear"
+      }
+    },
+    {
+      "id": "focusghost-unrelated-game-repo",
+      "tags": ["pdf", "focusghost", "wrong-project"],
+      "sessionGoal": "work on FocusGhost classification and nudges",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "space-racer-game: Unity arcade game - GitHub - Google Chrome",
+        "tabTitle": "space-racer-game: Unity arcade game - GitHub"
+      },
+      "expected": {
+        "status": "neutral",
+        "reasonCode": "unclear"
+      }
+    },
+    {
+      "id": "focusghost-chatgpt-classification",
+      "tags": ["pdf", "focusghost", "ai-help"],
+      "sessionGoal": "work on FocusGhost classification and nudges",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "Improve FocusGhost activity classification - ChatGPT - Google Chrome",
+        "tabTitle": "Improve FocusGhost activity classification - ChatGPT"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "relevant-reference"
+      }
+    },
+    {
+      "id": "focusghost-twitter-productivity-thread",
+      "tags": ["pdf", "focusghost", "weakly-related"],
+      "sessionGoal": "work on FocusGhost classification and nudges",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "Productivity apps and attention - Twitter - Google Chrome",
+        "tabTitle": "Productivity apps and attention - Twitter"
+      },
+      "expected": {
+        "status": "neutral",
+        "reasonCode": "unclear"
+      }
+    },
+    {
+      "id": "focusghost-tiktok",
+      "tags": ["pdf", "focusghost", "social"],
+      "sessionGoal": "work on FocusGhost classification and nudges",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "For You - TikTok - Google Chrome",
+        "tabTitle": "For You - TikTok"
+      },
+      "expected": {
+        "status": "distraction",
+        "reasonCode": "unrelated"
+      }
+    },
+    {
+      "id": "focusghost-empty-tab",
+      "tags": ["pdf", "focusghost", "setup"],
+      "sessionGoal": "work on FocusGhost classification and nudges",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "New Tab - Google Chrome",
+        "tabTitle": "New Tab"
+      },
+      "expected": {
+        "status": "neutral",
+        "reasonCode": "setup"
+      }
+    },
+    {
+      "id": "cs-vscode-homework-file",
+      "tags": ["pdf", "cs-homework", "direct-work"],
+      "sessionGoal": "finish my Python recursion homework",
+      "activity": {
+        "appName": "Visual Studio Code",
+        "bundleId": "com.microsoft.VSCode",
+        "windowTitle": "recursion_homework.py - cs-assignment",
+        "tabTitle": "recursion_homework.py - cs-assignment"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "direct-work"
+      }
+    },
+    {
+      "id": "cs-python-docs",
+      "tags": ["pdf", "cs-homework", "relevant-reference"],
+      "sessionGoal": "finish my Python recursion homework",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "Python documentation: recursion and functions - Google Chrome",
+        "tabTitle": "Python documentation: recursion and functions"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "relevant-reference"
+      }
+    },
+    {
+      "id": "cs-stack-overflow-exact-error",
+      "tags": ["pdf", "cs-homework", "relevant-reference"],
+      "sessionGoal": "finish my Python recursion homework",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "Python recursion maximum depth error - Stack Overflow - Google Chrome",
+        "tabTitle": "Python recursion maximum depth error - Stack Overflow"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "relevant-reference"
+      }
+    },
+    {
+      "id": "cs-chatgpt-concept-help",
+      "tags": ["pdf", "cs-homework", "ai-help"],
+      "sessionGoal": "finish my Python recursion homework",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "Explain Python recursion base cases - ChatGPT - Google Chrome",
+        "tabTitle": "Explain Python recursion base cases - ChatGPT"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "relevant-reference"
+      }
+    },
+    {
+      "id": "cs-random-ai-repo",
+      "tags": ["pdf", "cs-homework", "wrong-project"],
+      "sessionGoal": "finish my Python recursion homework",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "image-generator-transformer: AI image project - GitHub - Google Chrome",
+        "tabTitle": "image-generator-transformer: AI image project - GitHub"
+      },
+      "expected": {
+        "status": "neutral",
+        "reasonCode": "unclear"
+      }
+    },
+    {
+      "id": "cs-youtube-python-tutorial",
+      "contrastGroup": "python-tutorial-by-task",
+      "tags": ["pdf", "cs-homework", "youtube"],
+      "sessionGoal": "finish my Python recursion homework",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "Python Recursion Tutorial for Beginners - YouTube - Google Chrome",
+        "tabTitle": "Python Recursion Tutorial for Beginners - YouTube"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "relevant-reference"
+      }
+    },
+    {
+      "id": "history-youtube-python-tutorial",
+      "contrastGroup": "python-tutorial-by-task",
+      "tags": ["contrast", "history", "youtube"],
+      "sessionGoal": "write a history essay about the French Revolution",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "Python Recursion Tutorial for Beginners - YouTube - Google Chrome",
+        "tabTitle": "Python Recursion Tutorial for Beginners - YouTube"
+      },
+      "expected": {
+        "status": "neutral",
+        "reasonCode": "unclear"
+      }
+    },
+    {
+      "id": "cs-youtube-music-video",
+      "tags": ["pdf", "cs-homework", "entertainment"],
+      "sessionGoal": "finish my Python recursion homework",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "Coldplay - Yellow (Official Music Video) - YouTube - Google Chrome",
+        "tabTitle": "Coldplay - Yellow (Official Music Video) - YouTube"
+      },
+      "expected": {
+        "status": "distraction",
+        "reasonCode": "unrelated"
+      }
+    },
+    {
+      "id": "cs-discord-classmate-homework",
+      "tags": ["pdf", "cs-homework", "communication"],
+      "sessionGoal": "finish my Python recursion homework",
+      "activity": {
+        "appName": "Discord",
+        "bundleId": "com.hnc.Discord",
+        "windowTitle": "study-group | Python recursion homework help",
+        "tabTitle": "study-group | Python recursion homework help"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "relevant-reference"
+      }
+    },
+    {
+      "id": "cs-discord-gaming-chat",
+      "tags": ["pdf", "cs-homework", "social"],
+      "sessionGoal": "finish my Python recursion homework",
+      "activity": {
+        "appName": "Discord",
+        "bundleId": "com.hnc.Discord",
+        "windowTitle": "gaming-chat | weekend Valorant plans",
+        "tabTitle": "gaming-chat | weekend Valorant plans"
+      },
+      "expected": {
+        "status": "distraction",
+        "reasonCode": "unrelated"
+      }
+    },
+    {
+      "id": "history-google-docs-essay",
+      "contrastGroup": "history-doc-by-task",
+      "tags": ["pdf", "history", "direct-work"],
+      "sessionGoal": "write a history essay about the French Revolution",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "French Revolution Essay - Google Docs - Google Chrome",
+        "tabTitle": "French Revolution Essay - Google Docs"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "direct-work"
+      }
+    },
+    {
+      "id": "focusghost-history-google-doc",
+      "contrastGroup": "history-doc-by-task",
+      "tags": ["contrast", "focusghost", "wrong-document"],
+      "sessionGoal": "work on FocusGhost classification and nudges",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "French Revolution Essay - Google Docs - Google Chrome",
+        "tabTitle": "French Revolution Essay - Google Docs"
+      },
+      "expected": {
+        "status": "neutral",
+        "reasonCode": "unclear"
+      }
+    },
+    {
+      "id": "history-research-article",
+      "tags": ["pdf", "history", "relevant-reference"],
+      "sessionGoal": "write a history essay about the French Revolution",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "Causes of the French Revolution - Britannica - Google Chrome",
+        "tabTitle": "Causes of the French Revolution - Britannica"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "relevant-reference"
+      }
+    },
+    {
+      "id": "history-wikipedia-topic",
+      "tags": ["pdf", "history", "relevant-reference"],
+      "sessionGoal": "write a history essay about the French Revolution",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "French Revolution - Wikipedia - Google Chrome",
+        "tabTitle": "French Revolution - Wikipedia"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "relevant-reference"
+      }
+    },
+    {
+      "id": "history-citation-generator",
+      "tags": ["pdf", "history", "support-tool"],
+      "sessionGoal": "write a history essay about the French Revolution",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "MLA Citation Generator - Cite This For Me - Google Chrome",
+        "tabTitle": "MLA Citation Generator - Cite This For Me"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "relevant-reference"
+      }
+    },
+    {
+      "id": "history-youtube-documentary",
+      "tags": ["pdf", "history", "youtube", "relevant-reference"],
+      "sessionGoal": "write a history essay about the French Revolution",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "French Revolution Documentary - YouTube - Google Chrome",
+        "tabTitle": "French Revolution Documentary - YouTube"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "relevant-reference"
+      }
+    },
+    {
+      "id": "history-youtube-basketball",
+      "tags": ["pdf", "history", "sports"],
+      "sessionGoal": "write a history essay about the French Revolution",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "NBA Best Plays This Week - YouTube - Google Chrome",
+        "tabTitle": "NBA Best Plays This Week - YouTube"
+      },
+      "expected": {
+        "status": "distraction",
+        "reasonCode": "unrelated"
+      }
+    },
+    {
+      "id": "history-spotify",
+      "tags": ["pdf", "history", "background-audio"],
+      "sessionGoal": "write a history essay about the French Revolution",
+      "activity": {
+        "appName": "Spotify",
+        "bundleId": "com.spotify.client",
+        "windowTitle": "Spotify Premium",
+        "tabTitle": "Spotify Premium"
+      },
+      "expected": {
+        "status": "neutral",
+        "reasonCode": "unclear"
+      }
+    },
+    {
+      "id": "history-google-drive-essay-files",
+      "tags": ["pdf", "history", "setup"],
+      "sessionGoal": "write a history essay about the French Revolution",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "French Revolution Essay Sources - Google Drive - Google Chrome",
+        "tabTitle": "French Revolution Essay Sources - Google Drive"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "direct-work"
+      }
+    },
+    {
+      "id": "history-email-inbox",
+      "tags": ["pdf", "history", "admin"],
+      "sessionGoal": "write a history essay about the French Revolution",
+      "activity": {
+        "appName": "Microsoft Outlook",
+        "bundleId": "com.microsoft.Outlook",
+        "windowTitle": "Inbox - Outlook",
+        "tabTitle": "Inbox - Outlook"
+      },
+      "expected": {
+        "status": "neutral",
+        "reasonCode": "setup"
+      }
+    },
+    {
+      "id": "biology-notes",
+      "tags": ["pdf", "study", "direct-work"],
+      "sessionGoal": "study cell respiration for my biology exam",
+      "activity": {
+        "appName": "Obsidian",
+        "bundleId": "md.obsidian",
+        "windowTitle": "Cell respiration notes - Biology",
+        "tabTitle": "Cell respiration notes - Biology"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "direct-work"
+      }
+    },
+    {
+      "id": "design-figma-nudge-mockup",
+      "tags": ["pdf", "design", "direct-work"],
+      "sessionGoal": "design the FocusGhost nudge UI",
+      "activity": {
+        "appName": "Figma",
+        "bundleId": "com.figma.Desktop",
+        "windowTitle": "FocusGhost nudge modal - Figma",
+        "tabTitle": "FocusGhost nudge modal"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "direct-work"
+      }
+    },
+    {
+      "id": "design-photoshop-icon",
+      "tags": ["pdf", "design", "direct-work"],
+      "sessionGoal": "design the FocusGhost nudge UI",
+      "activity": {
+        "appName": "Adobe Photoshop",
+        "bundleId": "com.adobe.Photoshop",
+        "windowTitle": "focusghost-nudge-icon.psd",
+        "tabTitle": "focusghost-nudge-icon.psd"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "direct-work"
+      }
+    },
+    {
+      "id": "design-pinterest-notification-reference",
+      "contrastGroup": "pinterest-reference-by-task",
+      "tags": ["pdf", "design", "relevant-reference"],
+      "sessionGoal": "design the FocusGhost nudge UI",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "Notification UI inspiration - Pinterest - Google Chrome",
+        "tabTitle": "Notification UI inspiration - Pinterest"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "relevant-reference"
+      }
+    },
+    {
+      "id": "cs-pinterest-notification-reference",
+      "contrastGroup": "pinterest-reference-by-task",
+      "tags": ["contrast", "cs-homework", "weakly-related"],
+      "sessionGoal": "finish my Python recursion homework",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "Notification UI inspiration - Pinterest - Google Chrome",
+        "tabTitle": "Notification UI inspiration - Pinterest"
+      },
+      "expected": {
+        "status": "neutral",
+        "reasonCode": "unclear"
+      }
+    },
+    {
+      "id": "design-dribbble-modal-reference",
+      "tags": ["pdf", "design", "relevant-reference"],
+      "sessionGoal": "design the FocusGhost nudge UI",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "Notification modal examples - Dribbble - Google Chrome",
+        "tabTitle": "Notification modal examples - Dribbble"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "relevant-reference"
+      }
+    },
+    {
+      "id": "design-pinterest-outfits",
+      "tags": ["pdf", "design", "shopping"],
+      "sessionGoal": "design the FocusGhost nudge UI",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "Summer outfit ideas - Pinterest - Google Chrome",
+        "tabTitle": "Summer outfit ideas - Pinterest"
+      },
+      "expected": {
+        "status": "distraction",
+        "reasonCode": "unrelated"
+      }
+    },
+    {
+      "id": "design-youtube-ui-tutorial",
+      "tags": ["pdf", "design", "youtube", "relevant-reference"],
+      "sessionGoal": "design the FocusGhost nudge UI",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "Notification UI Design Tutorial - YouTube - Google Chrome",
+        "tabTitle": "Notification UI Design Tutorial - YouTube"
+      },
+      "expected": {
+        "status": "focus",
+        "reasonCode": "relevant-reference"
+      }
+    },
+    {
+      "id": "design-youtube-vlog",
+      "tags": ["pdf", "design", "entertainment"],
+      "sessionGoal": "design the FocusGhost nudge UI",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "A Day in My Life Vlog - YouTube - Google Chrome",
+        "tabTitle": "A Day in My Life Vlog - YouTube"
+      },
+      "expected": {
+        "status": "distraction",
+        "reasonCode": "unrelated"
+      }
+    },
+    {
+      "id": "neutral-file-explorer",
+      "tags": ["pdf", "neutral", "setup"],
+      "sessionGoal": "work on FocusGhost classification and nudges",
+      "activity": {
+        "appName": "File Explorer",
+        "bundleId": "",
+        "windowTitle": "Downloads",
+        "tabTitle": "Downloads"
+      },
+      "expected": {
+        "status": "neutral",
+        "reasonCode": "setup"
+      }
+    },
+    {
+      "id": "neutral-system-settings",
+      "tags": ["pdf", "neutral", "setup"],
+      "sessionGoal": "work on FocusGhost classification and nudges",
+      "activity": {
+        "appName": "Settings",
+        "bundleId": "",
+        "windowTitle": "System Settings",
+        "tabTitle": "System Settings"
+      },
+      "expected": {
+        "status": "neutral",
+        "reasonCode": "setup"
+      }
+    },
+    {
+      "id": "neutral-login-page",
+      "tags": ["pdf", "neutral", "setup"],
+      "sessionGoal": "work on FocusGhost classification and nudges",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "Sign in to GitHub - Google Chrome",
+        "tabTitle": "Sign in to GitHub"
+      },
+      "expected": {
+        "status": "neutral",
+        "reasonCode": "setup"
+      }
+    },
+    {
+      "id": "neutral-loading-page",
+      "tags": ["pdf", "neutral", "setup"],
+      "sessionGoal": "work on FocusGhost classification and nudges",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "Loading... - Google Chrome",
+        "tabTitle": "Loading..."
+      },
+      "expected": {
+        "status": "neutral",
+        "reasonCode": "setup"
+      }
+    },
+    {
+      "id": "distraction-sports-scores",
+      "tags": ["pdf", "history", "sports"],
+      "sessionGoal": "write a history essay about the French Revolution",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "NBA Scores - ESPN - Google Chrome",
+        "tabTitle": "NBA Scores - ESPN"
+      },
+      "expected": {
+        "status": "distraction",
+        "reasonCode": "unrelated"
+      }
+    },
+    {
+      "id": "distraction-shopping-shoes",
+      "tags": ["pdf", "study", "shopping"],
+      "sessionGoal": "study cell respiration for my biology exam",
+      "activity": {
+        "appName": "Google Chrome",
+        "bundleId": "com.google.Chrome",
+        "windowTitle": "Running Shoes for Sale - ShopStyle - Google Chrome",
+        "tabTitle": "Running Shoes for Sale - ShopStyle"
+      },
+      "expected": {
+        "status": "distraction",
+        "reasonCode": "unrelated"
+      }
+    }
+  ]
+}

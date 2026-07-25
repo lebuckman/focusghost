@@ -10,7 +10,9 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts,.tsx ."
+    "lint": "eslint --ext .ts,.tsx .",
+    "classification:baseline": "node --no-warnings --experimental-strip-types scripts/classification-baseline.mjs",
+    "classification:check": "node --no-warnings --experimental-strip-types scripts/classification-baseline.mjs --strict"
   },
   "keywords": [],
   "author": {

@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "name": "FocusGhost time-policy behavior",
+  "source": "focusghostClassificationUpdates.pdf",
+  "description": "Desired timing outcomes for later temporal-policy work. Phase 0 validates and versions these scenarios but does not change the drift engine.",
+  "cases": [
+    {
+      "id": "brief-medium-distraction-stays-quiet",
+      "status": "distraction",
+      "confidence": "medium",
+      "presenceSec": 15,
+      "repeatVisits": 0,
+      "sensitivity": "balanced",
+      "expectedAction": "stay-quiet"
+    },
+    {
+      "id": "lingering-medium-distraction-nudges",
+      "status": "distraction",
+      "confidence": "medium",
+      "presenceSec": 180,
+      "repeatVisits": 0,
+      "sensitivity": "balanced",
+      "expectedAction": "nudge"
+    },
+    {
+      "id": "high-distraction-nudges-sooner",
+      "status": "distraction",
+      "confidence": "high",
+      "presenceSec": 45,
+      "repeatVisits": 0,
+      "sensitivity": "balanced",
+      "expectedAction": "nudge"
+    },
+    {
+      "id": "brief-neutral-stays-quiet",
+      "status": "neutral",
+      "confidence": "low",
+      "presenceSec": 30,
+      "repeatVisits": 0,
+      "sensitivity": "balanced",
+      "expectedAction": "stay-quiet"
+    },
+    {
+      "id": "lingering-neutral-soft-check",
+      "status": "neutral",
+      "confidence": "low",
+      "presenceSec": 180,
+      "repeatVisits": 0,
+      "sensitivity": "balanced",
+      "expectedAction": "soft-check"
+    },
+    {
+      "id": "repeated-neutral-soft-check",
+      "status": "neutral",
+      "confidence": "low",
+      "presenceSec": 45,
+      "repeatVisits": 3,
+      "sensitivity": "balanced",
+      "expectedAction": "soft-check"
+    },
+    {
+      "id": "neutral-does-not-age-into-distraction",
+      "status": "neutral",
+      "confidence": "low",
+      "presenceSec": 600,
+      "repeatVisits": 0,
+      "sensitivity": "balanced",
+      "expectedAction": "soft-check"
+    },
+    {
+      "id": "blocked-activity-short-presence",
+      "status": "distraction",
+      "confidence": "high",
+      "presenceSec": 5,
+      "repeatVisits": 0,
+      "sensitivity": "balanced",
+      "blocked": true,
+      "expectedAction": "block-intervention"
+    },
+    {
+      "id": "true-system-idle-pauses-session",
+      "status": "inactive",
+      "confidence": "high",
+      "presenceSec": 300,
+      "repeatVisits": 0,
+      "sensitivity": "balanced",
+      "systemIdleSec": 300,
+      "expectedAction": "pause"
+    },
+    {
+      "id": "snooze-is-activity-specific",
+      "status": "distraction",
+      "confidence": "high",
+      "presenceSec": 180,
+      "repeatVisits": 2,
+      "sensitivity": "balanced",
+      "activityKey": "reddit:productivity",
+      "snoozedActivityKey": "youtube:music",
+      "expectedAction": "nudge"
+    }
+  ]
+}
